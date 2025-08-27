@@ -490,28 +490,20 @@ void Controller::shutdown() {
   this->ready_ = false;
 }
 
-#define MINUET_FAN_DRIVER_RETURN_IF_NOT_READY \
-  if (!this->ready_) { \
-    ESP_LOGW(TAG, "Fan motor not ready"); \
-    return; \
-  }
-
-#define MINUET_FAN_DRIVER_RETURN_RESULT_IF_NOT_READY(result) \
-  if (!this->ready_) { \
-    ESP_LOGW(TAG, "Fan motor not ready"); \
-    return (result); \
-  }
-
 bool Controller::set_state(float speed_rpm, bool exhaust, bool brake, bool keep_awake) {
   ESP_LOGI(TAG, "Set fan state: speed_rpm=%f, exhaust=%d, brake=%d, keep_awake=%d", speed_rpm, exhaust, brake, keep_awake);
-  MINUET_FAN_DRIVER_RETURN_RESULT_IF_NOT_READY(false);
+  const bool run = speed_rpm > 0;
+  if (!ready_) {
+    if (!run && !brake) return true; // not ready and it's ok because we're not trying to operate the motor
+    ESP_LOGW(TAG, "Fan motor not ready");
+    return false;
+  }
 
   if (driver()->config_shadow().needs_mpet_for_speed_loop()) {
     ESP_LOGW(TAG, "Must run MPET before starting the fan.");
     return false; // don't poke the speed input
   }
 
-  const bool run = speed_rpm > 0;
   if (run > 0 || keep_awake) {
     driver()->wake();
   }
@@ -536,7 +528,10 @@ bool Controller::set_state(float speed_rpm, bool exhaust, bool brake, bool keep_
 }
 
 void Controller::start_mpet() {
-  MINUET_FAN_DRIVER_RETURN_IF_NOT_READY;
+  if (!this->ready_) {
+    ESP_LOGW(TAG, "Fan motor not ready");
+    return;
+  }
 
   driver()->wake();
   driver()->clear_fault();
