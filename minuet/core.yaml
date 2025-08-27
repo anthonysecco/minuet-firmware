@@ -6,6 +6,8 @@
 # Variables:
 #   - Set `minuet_board_version` according to the silkscreen label on your
 #     Minuet circuit board, e.g. 'v3_0'.
+defaults:
+  minuet_board_version: 'unknown'
 
 ### PACKAGE: PROJECT
 #

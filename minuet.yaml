@@ -60,24 +60,25 @@ packages:
 
   ### PACKAGE: NETWORK
   #
-  # In the default factory firmware, Minuet includes WiFi support and the WiFi radio
-  # remains switched OFF until the user turns the WiFi radio ON.  When the WiFi radio
-  # is ON, Minuet will attempt to connect to the WiFi network using the provided SSID
-  # and password (if any).  If Minuet cannot connect after 1 minute, then it will start
-  # its own access point using the built-in 'ap' credentials and it will serve a captive
-  # portal to let the user provide the WiFi SSID and password.
+  # In the default factory firmware, the WiFi radio is disabled on boot and remains
+  # switched OFF until the user enables the WiFi radio.
   #
-  # Here are some suggestions for customizing the network behavior.
-  #
-  # To completely disable the WiFi radio, comment out the entire `network` package
-  # and the WiFi switch package to omit all WiFi functionality and keep the radio
-  # OFF indefinitely.
+  # When the WiFi radio is enabled, Minuet will attempt to connect to the WiFi network using
+  # the provided SSID and password (if any).  If Minuet cannot connect after 1 minute,
+  # then it will start its own access point using the built-in 'ap' credentials and it
+  # will serve a captive portal to let the user provide the WiFi SSID and password.
   #
   # To require Minuet to connect to a specific WiFi network, uncomment the `networks`
-  # section and provide the SSID and password for your WiFi network then comment out the
-  # `ap` and `captive_portal` sections.  To improve security and reliability while traveling
-  # or when you have integrated Minuet with Home Assistant, it's a good idea to require Minuet
-  # to only ever connect to your own WiFi network.  Never expose Minuet to the public Internet!
+  # section and specify the SSID and password for your WiFi network in `secrets.yaml`
+  # then comment out the `ap` and `captive_portal` sections.  Set `fast_connect` to true
+  # to connect to your network more quickly or to connect to hidden networks.
+  #
+  # The WiFi radio consumes negligible power when connected to a network as a client.
+  # The WiFi radio consumes about 250 mW when operating in access point mode.
+  #
+  # To improve security and reliability while traveling or when you have integrated Minuet
+  # with Home Assistant, it's a good idea to require Minuet to only ever connect to your own
+  # WiFi network and disable access point mode.  Never expose Minuet to the public Internet!
   #
   # Of course, you can configure the network any way you like.
   minuet_network:
@@ -86,9 +87,11 @@ packages:
     wifi:
       id: minuet_wifi
       power_save_mode: light
+      reboot_timeout: 0s
       # networks:
       #   - ssid: !secret wifi_ssid
-      #   - password: !secret wifi_password
+      #     password: !secret wifi_password
+      #     hidden: false
       # fast_connect: true
       ap:
         ssid: !secret minuet_access_point_ssid
@@ -97,17 +100,27 @@ packages:
 
     # Captive portal: asks you to provide WiFi credentials if none have been configured
     # Refer to https://esphome.io/components/captive_portal/
+    #
+    # Navigate to http://192.168.4.1/ to set up WiFi credentials after connecting
+    # to the access point using the credentials specified in the `ap` section above.
     captive_portal:
 
-    # WiFi switch: lets you toggle the WiFi radio ON or OFF.
-    # Comment out this package if you have removed the `wifi` component.
+    # WiFi switch: lets you enable or disable the WiFi radio.
+    # The initial behavior of the WiFi switch depends on the restore mode.
     #
     # Variables:
-    #   - Set `minuet_wifi_default_state` to 'ON' or 'OFF'.
+    #   - Set `minuet_wifi_switch_restore_mode` to configure the state of the WiFi radio
+    #     on power up and after a factory reset.  Use one of the following values:
+    #     - RESTORE_DEFAULT_OFF: Restores the WiFi switch state from persistent storage
+    #                              and set it to OFF by default after a factory reset.
+    #     - RESTORE_DEFAULT_ON:  Restores the WiFi switch state from persistent storage
+    #                              and set it to ON by default after a factory reset.
+    #     - ALWAYS_OFF:          Sets the WiFi switch state to OFF on power up.
+    #     - ALWAYS_ON:           Sets the WiFi switch state to ON on power up.
     <<: !include
       file: minuet/wifi-switch.yaml
       vars:
-        minuet_wifi_default_state: 'OFF'
+        minuet_wifi_switch_restore_mode: RESTORE_DEFAULT_OFF
 
   ### PACKAGE: LOCAL NETWORK ACCESS
   #
@@ -140,9 +153,9 @@ packages:
     # API component: accepts authenticated API requests from the local network
     # Refer to https://esphome.io/components/api/
     api:
-      reboot_timeout: 0s
       encryption:
         key: !secret minuet_api_encryption_key
+      reboot_timeout: 0s
 
     # Web server: lets you control Minuet and view logs from the local network
     # Refer to https://esphome.io/components/web_server/

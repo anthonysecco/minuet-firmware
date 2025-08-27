@@ -8,6 +8,9 @@
 # Variables:
 #   - Set `minuet_light_accessory_board_version` according to the silkscreen label
 #     printed on your light accessory board, e.g. 'v3_0'.
+defaults:
+  minuet_light_accessory_board_version: 'unknown'
+
 minuet_light:
   # Dimmable light.
   light:
