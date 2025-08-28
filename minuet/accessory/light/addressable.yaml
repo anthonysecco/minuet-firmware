@@ -14,14 +14,16 @@ defaults:
   minuet_led_strip: 'unknown'
 
 minuet_light:
-  # LED strip configuration.
-  # You can add your own configuration here if your strip is different.
   substitutions:
+    # LED strip configurations.
+    # You can add your own configuration here if your strip is different.
     minuet_light_config:
       # BTF Lighting, 12 V, WS2814, RGBW, 60 LEDs per meter, 3 LEDs per pixel
       # Remarks: Bright
       btf_ws2814_rgbw_60:
-        num_leds: 19
+        num_pixels: 19
+        leds_per_meter: 60
+        leds_per_pixel: 3
         chipset: WS2811
         rgb_order: RGB
         is_rgbw: false
@@ -31,13 +33,20 @@ minuet_light:
       # BTF Lighting, 12 V, SK6812, RGBW, 60 LEDs per meter, 1 LED per pixel
       # Remarks: Ultra bright, unsafe to run all channels at full power (draws 1.7 A and gets too hot)
       btf_sk6812_rgbw_60:
-        num_leds: 58
+        num_pixels: 57
+        leds_per_meter: 60
+        leds_per_pixel: 1
         chipset: SK6812
         rgb_order: GRB
         is_rgbw: true
         is_wrgb: false
         gamma_correct: 1.4
         color_correct: [0.6, 0.54, 0.54, 0.6]
+
+    # Calculate the theoretical number of pixels that would fit around the circumference
+    # of the fan cowling to form a continuous ring given the LED strip's pixel density.  This value
+    # can be used to create animations with rotational symmetry around the fan cowling.
+    minuet_light_ring_pixels: ${(0.308 * 3.1415 * minuet_light_config[minuet_led_strip].leds_per_meter / minuet_light_config[minuet_led_strip].leds_per_pixel) | round()}
 
   # Light component.
   light:
@@ -46,7 +55,7 @@ minuet_light:
       platform: esp32_rmt_led_strip
       pin: ${minuet_light_pin_data}
       restore_mode: ALWAYS_OFF
-      num_leds: ${minuet_light_config[minuet_led_strip].num_leds}
+      num_leds: ${minuet_light_config[minuet_led_strip].num_pixels}
       chipset: ${minuet_light_config[minuet_led_strip].chipset}
       rgb_order: ${minuet_light_config[minuet_led_strip].rgb_order}
       is_rgbw: ${minuet_light_config[minuet_led_strip].is_rgbw}
@@ -57,7 +66,7 @@ minuet_light:
       default_transition_length: 0.5s
       effects:
         - addressable_rainbow:
-            width: ${minuet_light_config[minuet_led_strip].num_leds}
+            width: ${minuet_light_ring_pixels}
         - addressable_twinkle:
         - pulse:
         - lambda:
@@ -88,7 +97,7 @@ minuet_light:
         then:
           lambda: |-
             // Some effects don't clear the white channel when changing colors which makes the
-            // effect overly bright so we clear the white channel and restart the effect.
+            // effect overly bright so we clear the white channel.
             auto& light = id(minuet_light);
             const auto& values = light->remote_values;
             if (values.get_white() != 0.f) {
