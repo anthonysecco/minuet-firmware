@@ -175,6 +175,40 @@ void apply_nec_code(esphome::light::LightState* light, esphome::remote_base::NEC
   ESP_LOGD(minuet::TAG, "Received unknown light remote control code: %d", command);
 }
 
+void init() {
+  minuet_keypad_accessory_toggle->value() = []() -> bool {
+    toggle(minuet_light);
+    return true;
+  };
+
+  minuet_keypad_accessory_up->value() = []() -> bool {
+    change_brightness(minuet_light, 1);
+    return true;
+  };
+
+  minuet_keypad_accessory_down->value() = []() -> bool {
+    change_brightness(minuet_light, -1);
+    return true;
+  };
+
+  minuet_ir_control_accessory_nec->value() = [](esphome::remote_base::NECData code) {
+    apply_nec_code(minuet_light, code);
+  };
+
+  minuet_light->add_new_remote_values_callback([] {
+    if (minuet_light->remote_values.is_on() && minuet_safety_lock->state) {
+      minuet_tone->execute("forbidden");
+      turn_off(minuet_light);
+    }
+  });
+
+  minuet_safety_lock->add_on_state_callback([](bool state) {
+    if (state) {
+      turn_off(minuet_light);
+    }
+  });
+}
+
 } // namespace light
 } // namespace accessory
 } // namespace minuet
