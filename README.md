@@ -22,8 +22,8 @@ It gets easier the second time you do it.
 
 - Familiarize yourself with the [ESPHome](https://esphome.io/) tools you will be using to compile and run the code.
 - Download the most recent contents of this repository.
-- Make a copy of `minuet.yaml` with a name of your choice, such as `my_minuet.yaml`.
-- Ensure that the `minuet` directory is next to `my_minuet.yaml`.  If you are using the ESPHome Builder add-on for Home Assistant, make sure to copy the `minuet` directory into the `/homeassistant/esphome` directory together with `my_minuet.yaml`.
+- Make a copy of `minuet.yaml` with a name of your choice, such as `my_minuet.yaml`.  Or [use `minuet.yaml` as a package](#advanced-configuration-using-minuetyaml-as-a-package).
+- Ensure that the `minuet` directory is next to `my_minuet.yaml`.  If you are using the ESPHome Builder add-on for Home Assistant, copy the `minuet` directory into the `/homeassistant/esphome` directory next to `my_minuet.yaml`.
 - Compile the unmodified firmware to confirm that your development environment works correctly before you start making changes.
 - Edit `my_minuet.yaml` to your heart's content.
 - Compile the modified firmware.
@@ -33,17 +33,59 @@ It gets easier the second time you do it.
 > [!NOTE]
 > To reset into the bootloader when flashing the firmware over USB, press and hold the `BOOT` button then tap `RESET`.  This step should only be needed the first time the device is being flashed.  The device must be powered by a 12 V (nominal) supply to operate; it is not powered from USB.
 
-### Supporting hardware expansion
-
-When you attach additional hardware to Minuet via the `QWIIC` connector or `EXPANSION` port, you will need to add components to the firmware to support the expansion.
-
-Follow the instructions in `minuet.yaml` and either uncomment and configure the package needed for your hardware or add ESPHome components to the `my_package` package as shown near the end of the file.
-
 ### Packages
 
 The YAML configuration is subdivided into [packages](https://esphome.io/components/packages/) of components for ease of maintenance.  Each package declares a group of components related to a particular subsystem such as the fan motor driver, keypad, thermostat, or an accessory.  If you're adding a new subsystem, then you should create a new package for it to keep the components tidy.
 
 Some files contain collections of packages when one package just isn't enough.
+
+### Advanced configuration: using `minuet.yaml` as a package
+
+Instead of copying and editing `minuet.yaml` as a template for your configuration, you can include `minuet.yaml` unmodified as a package and layer your changes on top.  This method makes upgrades easier and it can be useful for firmware development.
+
+Create an empty YAML file with a name of your choice, such as `my_minuet.yaml`.
+
+Add the following contents to the file to get started.  Change this example to your liking.  Your declarations override those in the base template.  Use the [`!remove`]((https://esphome.io/components/packages/)) directive to remove sections in the base template that you don't need.
+
+<details>
+<summary>Example my_minuet.yaml</summary>
+
+```yaml
+# There are many Minuet configurations and this one is mine
+packages:
+  # Include the base configuration template
+  template: !include minuet.yaml
+
+  # Apply customizations to the template
+  custom:
+    # Give your Minuet a custom name
+    esphome:
+      name: my-minuet
+      friendly_name: My Minuet
+      name_add_mac_suffix: false
+
+    # Set the WiFi credentials for your network and remove the captive portal to
+    # improve security and reliability.
+    wifi:
+      ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      fast_connect: true
+      ap: !remove
+    captive_portal: !remove
+
+    # If you plan to make changes to the core firmware with Minuet plugged into your
+    # computer via USB (instead of WiFi), set `baud_rate` to enable USB and UART logging.
+    logger:
+      level: DEBUG
+      baud_rate: 921600
+```
+</details>
+
+### Supporting hardware expansion
+
+When you attach additional hardware to Minuet via the `QWIIC` connector or `EXPANSION` port, you will need to add components to the firmware to support the expansion.
+
+Follow the instructions in `minuet.yaml` and either uncomment and configure the package needed for your hardware or add ESPHome components to the `my_package` package as shown near the end of the file.
 
 ### Identifiers
 
