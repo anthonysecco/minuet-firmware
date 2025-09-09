@@ -64,8 +64,8 @@ packages:
   # switched OFF until the user enables the WiFi radio.
   #
   # When the WiFi radio is enabled, Minuet will attempt to connect to the WiFi network using
-  # the provided SSID and password (if any).  If Minuet cannot connect after 1 minute,
-  # then it will start its own access point using the built-in 'ap' credentials and it
+  # the provided SSID and password (if any).  If no networks have been configured then
+  # Minuet will start its own access point using the built-in 'ap' credentials and it
   # will serve a captive portal to let the user provide the WiFi SSID and password.
   #
   # To require Minuet to connect to a specific WiFi network, uncomment the `networks`
@@ -96,7 +96,7 @@ packages:
       ap:
         ssid: !secret minuet_access_point_ssid
         password: !secret minuet_access_point_password
-        ap_timeout: 1min
+        ap_timeout: 0s
 
     # Captive portal: asks you to provide WiFi credentials if none have been configured
     # Refer to https://esphome.io/components/captive_portal/
