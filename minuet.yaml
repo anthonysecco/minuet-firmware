@@ -78,7 +78,7 @@ packages:
   #
   # To improve security and reliability while traveling or when you have integrated Minuet
   # with Home Assistant, it's a good idea to require Minuet to only ever connect to your own
-  # WiFi network and disable access point mode.  Never expose Minuet to the public Internet!
+  # WiFi network and disable access point mode.  Never connect Minuet to public networks!
   #
   # Of course, you can configure the network any way you like.
   minuet_network:

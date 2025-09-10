@@ -18,7 +18,7 @@ The [minuet](./minuet) directory contains several more configuration YAML files 
 
 ### How to modify the firmware
 
-It gets easier the second time you do it.
+Here's how to get started.
 
 - Familiarize yourself with the [ESPHome](https://esphome.io/) tools you will be using to compile and run the code.
 - Download the most recent contents of this repository.
@@ -32,6 +32,9 @@ It gets easier the second time you do it.
 
 > [!NOTE]
 > To reset into the bootloader when flashing the firmware over USB, press and hold the `BOOT` button then tap `RESET`.  This step should only be needed the first time the device is being flashed.  The device must be powered by a 12 V (nominal) supply to operate; it is not powered from USB.
+
+> [!TIP]
+> We recommend compiling your WiFi SSID and password into the firmware during development (instead of relying on the captive portal WiFi setup method) to ensure that your device can still connect to your WiFi network after a factory reset of the non-volatile storage.
 
 ### Packages
 
@@ -57,8 +60,8 @@ packages:
   template: !include minuet.yaml
 
   # Apply customizations to the template
-  custom:
-    # Give your Minuet a custom name
+  my_customizations:
+    # Give your Minuet a custom name if you want.
     esphome:
       name: my-minuet
       friendly_name: My Minuet
