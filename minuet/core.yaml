@@ -27,7 +27,7 @@ minuet_project:
 # Build options for ESPHome.
 minuet_build:
   esphome:
-    min_version: "2025.8.0"
+    min_version: "2025.8.4"
     includes:
       - minuet/core.h
       - minuet/fan_driver.h
@@ -42,7 +42,6 @@ minuet_build:
     - source: github://brown-studios/esphome-mcf8316@main
       components: [ mcf8316 ]
       refresh: 1min
-    #- source: ../../esphome-mcf8316/components
 
 ### PACKAGE: BOARD
 #

@@ -237,29 +237,29 @@ Config Controller::make_config_(const MotorProfile& profile) {
   Config config = driver()->make_default_config();
 
   // Motor parameters
-  config.set(FG_DIV, uint8_t(profile.fg_div)); // Conversion factor from electrical Hz to rotor Hz
-  config.set(LEAD_ANGLE, uint8_t(profile.lead_angle)); // BEMF lead angle
-  config.set(MOTOR_RES, uint8_t(profile.motor_res)); // Motor phase resistance
-  config.set(MOTOR_IND, uint8_t(profile.motor_ind)); // Motor phase inductance
-  config.set(MOTOR_BEMF_CONST, uint8_t(profile.motor_bemf_const)); // Motor BEMF constant
-  config.set(SPD_LOOP_KP, uint16_t(profile.spd_loop_kp)); // Speed loop Kp coefficient
-  config.set(SPD_LOOP_KI, uint16_t(profile.spd_loop_ki)); // Speed loop Ki coefficient
+  config.set(FG_DIV, profile.fg_div); // Conversion factor from electrical Hz to rotor Hz
+  config.set(LEAD_ANGLE, profile.lead_angle); // BEMF lead angle
+  config.set(MOTOR_RES, profile.motor_res); // Motor phase resistance
+  config.set(MOTOR_IND, profile.motor_ind); // Motor phase inductance
+  config.set(MOTOR_BEMF_CONST, profile.motor_bemf_const); // Motor BEMF constant
+  config.set(SPD_LOOP_KP, profile.spd_loop_kp); // Speed loop Kp coefficient
+  config.set(SPD_LOOP_KI, profile.spd_loop_ki); // Speed loop Ki coefficient
   // N/A: CURR_LOOP_KP: only for current control loop
   // N/A: CURR_LOOP_KI: only for current control loop
 
   // Speed input
-  config.set(MAX_SPEED, uint16_t(convert_speed_in_rotor_hz_to_electrical_hz(rpm_to_hz(BOARD_MAX_SPEED_RPM), profile.fg_div) * 6)); // Maximum speed with a 100% reference input
-  config.set(INPUT_REFERENCE_WINDOW, uint8_t(0)); // Input reference window stops motor when speed reference inside the window: disabled
+  config.set(MAX_SPEED, unsigned(convert_speed_in_rotor_hz_to_electrical_hz(rpm_to_hz(BOARD_MAX_SPEED_RPM), profile.fg_div) * 6)); // Maximum speed with a 100% reference input
+  config.set(INPUT_REFERENCE_WINDOW, 0u); // Input reference window stops motor when speed reference inside the window: disabled
   // N/A: SPEED_RANGE_SEL: only for PWM speed input
   // N/A: INPUT_MAXIMUM_FREQ: only for frequency speed input
   // N/A: SPEED_LIMIT_ENABLE: only for reference inputs other than speed
 
   // Reference profiles (speed input transfer function)
-  config.set(REF_PROFILE_CONFIG, uint8_t(0)); // Reference profile configuration: equation, use the speed input directly as-is
-  config.set(DUTY_CLAMP1, uint8_t(0)); // Duty cycle clamp 1: 0%, must be 0, otherwise would impose a minimum duty cycle on the speed input
-  config.set(DUTY_HYS, uint8_t(0)); // Duty cycle hysteresis: 0%, must be 0, otherwise would impose hysteresis on the speed input
-  config.set(MIN_DUTY, uint8_t(0)); // Minimum duty cycle: 1%, must be as small as possible, will not operate the motor when the speed input is below this threshold
-  config.set(REF_CLAMP1, uint8_t(0)); // Reference clamp 1: 0%, must be 0, otherwise would impose a minimum value on the speed input
+  config.set(REF_PROFILE_CONFIG, 0u); // Reference profile configuration: equation, use the speed input directly as-is
+  config.set(DUTY_CLAMP1, 0u); // Duty cycle clamp 1: 0%, must be 0, otherwise would impose a minimum duty cycle on the speed input
+  config.set(DUTY_HYS, 0u); // Duty cycle hysteresis: 0%, must be 0, otherwise would impose hysteresis on the speed input
+  config.set(MIN_DUTY, 0u); // Minimum duty cycle: 1%, must be as small as possible, will not operate the motor when the speed input is below this threshold
+  config.set(REF_CLAMP1, 0u); // Reference clamp 1: 0%, must be 0, otherwise would impose a minimum value on the speed input
   // N/A: DUTY_ON1, DUTY_OFF1, DUTY_ON2, DUTY_OFF2, DUTY_CLAMP2
   // N/A: DUTY_A, DUTY_B, DUTY_C, DUTY_D, DUTY_E
   // N/A: REF_ON1, REF_OFF1, REF_ON2, REF_OFF2, REF_CLAMP2
@@ -272,22 +272,22 @@ Config Controller::make_config_(const MotorProfile& profile) {
   config.set(HIZ_EN, false); // ISD HI-Z state: disabled, coasting is not needed
   // N/A: HIZ_TIME: only for ISD HI-Z state
   config.set(RESYNC_EN, true); // ISD resynchronization state: enabled
-  config.set(FW_DRV_RESYN_THR, uint8_t(3)); // Resync speed threshold: 20% of MAX_SPEED
-  config.set(STAT_DETECT_THR, uint8_t(0)); // Stationary detection BEMF threshold: 50 mV, set to a low BEMF to ensure rotor really has stopped, particularly when changing directions
+  config.set(FW_DRV_RESYN_THR, 3u); // Resync speed threshold: 20% of MAX_SPEED
+  config.set(STAT_DETECT_THR, 0u); // Stationary detection BEMF threshold: 50 mV, set to a low BEMF to ensure rotor really has stopped, particularly when changing directions
   config.set(ISD_BEMF_FILT_ENABLE, true); // Enable BEMF filter during ISD: enabled, recommended according to tuning guide
-  config.set(ISD_STOP_TIME, uint8_t(2)); // ISD detect motor stopped: after 50 ms, increase for better confidence
-  config.set(ISD_RUN_TIME, uint8_t(2)); // ISD detect motor running: after 50 ms, increase for better confidence
-  config.set(ISD_TIMEOUT, uint8_t(2)); // ISD timeout: after 1000 ms
-  config.set(BRAKE_CURRENT_PERSIST, uint8_t(3)); // ISD brake persistence: 500 ms, wait longer to declare that the motor has braked due to rotor inertia
+  config.set(ISD_STOP_TIME, 2u); // ISD detect motor stopped: after 50 ms, increase for better confidence
+  config.set(ISD_RUN_TIME, 2u); // ISD detect motor running: after 50 ms, increase for better confidence
+  config.set(ISD_TIMEOUT, 2u); // ISD timeout: after 1000 ms
+  config.set(BRAKE_CURRENT_PERSIST, 3u); // ISD brake persistence: 500 ms, wait longer to declare that the motor has braked due to rotor inertia
   config.set(FAST_ISD_EN, false); // Fast ISD: disabled, slow ISD is more reliable
 
   // Motor startup with initial position detection
-  config.set(MTR_STARTUP, uint8_t(2)); // Motor startup: use IPD to avoid spinning the motor backwards, makes a little "tick" sound during startup
+  config.set(MTR_STARTUP, 2u); // Motor startup: use IPD to avoid spinning the motor backwards, makes a little "tick" sound during startup
   config.set(IPD_CLK_FREQ, profile.ipd_clk_freq); // IPD clock frequency
   config.set(IPD_CURR_THR, profile.ipd_curr_thr); // IPD current threshold
-  config.set(IPD_RLS_MODE, uint8_t(1)); // IPD release mode: tristate, faster decay than braking, less noisy
-  config.set(IPD_ADV_ANGLE, uint8_t(1)); // IPD advance angle: 30 degrees
-  config.set(IPD_REPEAT, uint8_t(2)); // IPD repeat count: 3 times, more reliable (2 times is enough but sometimes fails)
+  config.set(IPD_RLS_MODE, 1u); // IPD release mode: tristate, faster decay than braking, less noisy
+  config.set(IPD_ADV_ANGLE, 1u); // IPD advance angle: 30 degrees
+  config.set(IPD_REPEAT, 2u); // IPD repeat count: 3 times, more reliable (2 times is enough but sometimes fails)
   config.set(IPD_HIGH_RESOLUTION_EN, true); // IPD high resolution mode: enabled
   config.set(IPD_TIMEOUT_FAULT_EN, true); // IPD timeout fault mode: enabled
   config.set(IPD_FREQ_FAULT_EN, true); // IPD frequency fault mode: enabled
@@ -298,18 +298,18 @@ Config Controller::make_config_(const MotorProfile& profile) {
   // Open loop control
   config.set(OL_ILIMIT, profile.ol_ilimit); // Open loop motor phase current limit
   config.set(OL_ACC_A1, profile.ol_acc_a1); // Open loop acceleration rate
-  config.set(OL_ACC_A2, uint8_t(0)); // Open loop acceleration rate: 0 Hz/s^2
-  config.set(FIRST_CYCLE_FREQ_SEL, uint8_t(0)); // First cycle frequency select: start from 0 Hz
+  config.set(OL_ACC_A2, 0u); // Open loop acceleration rate: 0 Hz/s^2
+  config.set(FIRST_CYCLE_FREQ_SEL, 0u); // First cycle frequency select: start from 0 Hz
   // SLOW_FIRST_CYC_FREQ: sets start frequency only when FIRST_CYCLE_FREQ_SEL is 1
-  config.set(ALIGN_SLOW_RAMP_RATE, uint8_t(6)); // Open loop current ramp rate: 50 A/s (used for all startup modes, not just align)
+  config.set(ALIGN_SLOW_RAMP_RATE, 6u); // Open loop current ramp rate: 50 A/s (used for all startup modes, not just align)
 
   // Open loop to closed loop handoff
   config.set(AUTO_HANDOFF_EN, true); // Auto handoff to closed loop: enabled, ignores OPN_CL_HANDOFF_THR except for MPET
-  config.set(AUTO_HANDOFF_MIN_BEMF, uint8_t(2)); // Minimum BEMF for auto handoff: 100 mV
-  config.set(OPN_CL_HANDOFF_THR, uint8_t(21)); // Open to closed loop handoff speed: 25% of MAX_SPEED, used in MPET to get the motor running, ignored in normal operation due to auto handoff
+  config.set(AUTO_HANDOFF_MIN_BEMF, 2u); // Minimum BEMF for auto handoff: 100 mV
+  config.set(OPN_CL_HANDOFF_THR, 21u); // Open to closed loop handoff speed: 25% of MAX_SPEED, used in MPET to get the motor running, ignored in normal operation due to auto handoff
   config.set(IQ_RAMP_EN, false); // IQ ramp down in transition from open to closed loop: disabled, otherwise the transition takes too long
   config.set(LOW_SPEED_RECIRC_BRAKE_EN, true); // Open loop low speed braking: enabled, ensures the open loop can stop the motor quickly (otherwise inertia keeps the rotor spinning a long time)
-  config.set(THETA_ERROR_RAMP_RATE, uint8_t(2)); // Theta error ramp: 0.1 deg/ms
+  config.set(THETA_ERROR_RAMP_RATE, 2u); // Theta error ramp: 0.1 deg/ms
 
   // Closed loop control
   config.set(ILIMIT, profile.ilimit); // Closed loop motor phase current limit
@@ -317,17 +317,17 @@ Config Controller::make_config_(const MotorProfile& profile) {
   config.set(CL_SLOW_ACC, profile.cl_slow_acc); // Closed loop acceleration when not fully aligned
   config.set(CL_ACC, profile.cl_acc); // Closed loop acceleration
   config.set(CL_DEC, profile.cl_dec); // Closed loop deceleration
-  config.set(MTR_STOP, uint8_t(1)); // Closed loop motor stop mode: recirculate, avoids sending inductive energy back to the bus
-  config.set(MTR_STOP_BRK_TIME, uint8_t(13)); // Closed loop motor stop time: 5000 ms, needs to be long enough to account for rotor inertia
+  config.set(MTR_STOP, 1u); // Closed loop motor stop mode: recirculate, avoids sending inductive energy back to the bus
+  config.set(MTR_STOP_BRK_TIME, 13u); // Closed loop motor stop time: 5000 ms, needs to be long enough to account for rotor inertia
   // N/A: ACT_SPIN_THR: only for MTR_STOP active spin-down mode
 
   // Braking
-  config.set(BRK_MODE, uint8_t(1)); // Brake mode: low-side brake
-  config.set(BRK_CONFIG, uint8_t(1)); // Brake config: exit brake state based on current and time
-  config.set(BRK_CURR_THR, uint8_t(0)); // Brake current threshold: 0.1 A
-  config.set(BRK_TIME, uint8_t(14)); // Brake stop time: 10s, must allow a long time to stop due to high rotor inertia
-  config.set(BRAKE_SPEED_THRESHOLD, uint8_t(11)); // Brake speed threshold: reduce speed to 20% of MAX_SPEED before entering brake state
-  config.set(BRAKE_PIN_MODE, uint8_t(0)); // Brake pin mode: low-side brake
+  config.set(BRK_MODE, 1u); // Brake mode: low-side brake
+  config.set(BRK_CONFIG, 1u); // Brake config: exit brake state based on current and time
+  config.set(BRK_CURR_THR, 0u); // Brake current threshold: 0.1 A
+  config.set(BRK_TIME, 14u); // Brake stop time: 10s, must allow a long time to stop due to high rotor inertia
+  config.set(BRAKE_SPEED_THRESHOLD, 11u); // Brake speed threshold: reduce speed to 20% of MAX_SPEED before entering brake state
+  config.set(BRAKE_PIN_MODE, 0u); // Brake pin mode: low-side brake
   // N/A: ALIGN_BRAKE_ANGLE_SEL: only used when BRAKE_PIN_MODE is align brake mode
 
   // Active braking
@@ -341,7 +341,7 @@ Config Controller::make_config_(const MotorProfile& profile) {
   // N/A: ACTIVE_BRAKE_MOD_INDEX_LIMIT
 
   // Reverse drive
-  config.set(DIR_CHANGE_MODE, uint8_t(0)); // Direction change mode: brake then change directions (don't reverse drive)
+  config.set(DIR_CHANGE_MODE, 0u); // Direction change mode: brake then change directions (don't reverse drive)
   config.set(RVS_DR_EN, false); // Reverse drive: disabled, unnecessary and requires tuning
   // N/A: REV_DRV_HANDOFF_THR
   // N/A: REV_DRV_OPEN_LOOP_CURRENT
@@ -356,92 +356,92 @@ Config Controller::make_config_(const MotorProfile& profile) {
   // N/A: FLUX_WEAK_KI
 
   // Automatic lock retry
-  config.set(LCK_RETRY, uint8_t(2)); // Retry interval after lock: 1 s
-  config.set(AUTO_RETRY_TIMES, uint8_t(3)); // Auto-retry number of times: 5
+  config.set(LCK_RETRY, 2u); // Retry interval after lock: 1 s
+  config.set(AUTO_RETRY_TIMES, 3u); // Auto-retry number of times: 5
 
   // Software lock to protect PCB from overcurrent
   config.set(LOCK_ILIMIT, BOARD_LOCK_ILIMIT); // Software lock current limit
-  config.set(LOCK_ILIMIT_DEG, uint8_t(2)); // Software lock deglitch time: 0.2 ms
-  config.set(LOCK_ILIMIT_MODE, uint8_t(3)); // Software lock mode: retry up to retry limit then latch fault
+  config.set(LOCK_ILIMIT_DEG, 2u); // Software lock deglitch time: 0.2 ms
+  config.set(LOCK_ILIMIT_MODE, 3u); // Software lock mode: retry up to retry limit then latch fault
 
   // Hardware lock to protect PCB from overcurrent
   config.set(HW_LOCK_ILIMIT, BOARD_HW_LOCK_ILIMIT); // Hardware lock current limit
-  config.set(HW_LOCK_ILIMIT_DEG, uint8_t(2)); // Hardware lock deglitch time: 2 us
-  config.set(HW_LOCK_ILIMIT_MODE, uint8_t(3)); // Hardware lock mode: retry up to retry limit then latch fault
+  config.set(HW_LOCK_ILIMIT_DEG, 2u); // Hardware lock deglitch time: 2 us
+  config.set(HW_LOCK_ILIMIT_MODE, 3u); // Hardware lock mode: retry up to retry limit then latch fault
 
   // Motor lock to detect strange behavior of the motor
   config.set(LOCK1_EN, true); // Motor lock on abnormal speed: enabled
   config.set(LOCK2_EN, true); // Motor lock on abnormal BEMF: enabled
   config.set(LOCK3_EN, true); // Motor lock on no motor: enabled
-  config.set(LOCK_ABN_SPEED, uint8_t(0)); // Motor lock abnormal speed threshold: 130% of max speed
-  config.set(ABNORMAL_BEMF_THR, uint8_t(5)); // Motor abnormal BEMF threshold: 65%
-  config.set(ABNORMAL_BEMF_PERSISTENT_TIME, uint8_t(1)); // Motor abnormal BEMF detection time: 500 ms
-  config.set(NO_MTR_THR, uint8_t(0)); // No motor current threshold: 0.0375 A
+  config.set(LOCK_ABN_SPEED, 0u); // Motor lock abnormal speed threshold: 130% of max speed
+  config.set(ABNORMAL_BEMF_THR, 5u); // Motor abnormal BEMF threshold: 65%
+  config.set(ABNORMAL_BEMF_PERSISTENT_TIME, 1u); // Motor abnormal BEMF detection time: 500 ms
+  config.set(NO_MTR_THR, 0u); // No motor current threshold: 0.0375 A
   config.set(NO_MTR_FLT_CLOSEDLOOP_DIS, false); // No motor fault detection in closed loop: enabled
-  config.set(MTR_LCK_MODE, uint8_t(3)); // Motor lock mode: retry up to retry limit then latch fault
+  config.set(MTR_LCK_MODE, 3u); // Motor lock mode: retry up to retry limit then latch fault
 
   // Gate driver
   config.set(CIRCULAR_CURRENT_LIMIT_ENABLE, true); // Circular current limit: `ILIMIT` sets peak phase current limit
   config.set(AVS_EN, true); // Anti-voltage surge protection: enabled, prevent excess inductive energy from flowing back to the bus
   config.set(DEADTIME_COMP_EN, true); // Deadtime compensation: enabled, reduce audible noise
-  config.set(SLEW_RATE, uint8_t(3)); // Slew rate: 200 mV/us, factory default
-  config.set(MIN_ON_TIME, uint8_t(2)); // Low-side MOSFET minimum on-time: 0.5 us, factory default
+  config.set(SLEW_RATE, 3u); // Slew rate: 200 mV/us, factory default
+  config.set(MIN_ON_TIME, 2u); // Low-side MOSFET minimum on-time: 0.5 us, factory default
   config.set(DYNAMIC_CSA_GAIN_EN, true); // Dynamic current sense amplifier gain: enabled, factory default
   config.set(DYNAMIC_VOLTAGE_GAIN_EN, false); // Dynamic voltage gain: disabled, factory default
   // N/A: CSA_GAIN: only for when DYNAMIC_CSA_GAIN_EN is disabled
 
   // Modulation
   config.set(SPREAD_SPECTRUM_MODULATION_DIS, false); // Spread spectrum modulation: enabled
-  config.set(PWM_MODE, uint8_t(0)); // PWM mode: continuous space vector modulation
-  config.set(PWM_FREQ_OUT, uint8_t(3)); // PWM frequency: 25 kHz
-  config.set(PWM_DITHER_MODE, uint8_t(1)); // PWM dither mode: random
-  config.set(PWM_DITHER_DEPTH, uint8_t(1)); // PWM dither depth: 5%
+  config.set(PWM_MODE, 0u); // PWM mode: continuous space vector modulation
+  config.set(PWM_FREQ_OUT, 3u); // PWM frequency: 25 kHz
+  config.set(PWM_DITHER_MODE, 1u); // PWM dither mode: random
+  config.set(PWM_DITHER_DEPTH, 1u); // PWM dither depth: 5%
   // N/A: PWM_DITHER_STEP: only for triangular PWM dither
 
   // Buck converter
   config.set(BUCK_DIS, true); // Buck converter: disabled, FB_BK tied to +3.3 V rail
   config.set(BUCK_PS_DIS, true); // Buck power sequencing: disabled, AVDD supplies from VM, DVDD supplied from FB_BK
-  config.set(BUCK_SEL, uint8_t(0)); // Buck voltage selection: 3.3 V
-  config.set(BUCK_CL, uint8_t(1)); // Buck current limit: 150 mA, unclear if this setting is needed, suggested by SLLA673
+  config.set(BUCK_SEL, 0u); // Buck voltage selection: 3.3 V
+  config.set(BUCK_CL, 1u); // Buck current limit: 150 mA, unclear if this setting is needed, suggested by SLLA673
 
   // Bus voltage and power limits
-  config.set(BUS_VOLT, uint8_t(1)); // Bus voltage configuration: 30 V maximum
-  config.set(VOLTAGE_HYSTERESIS, uint8_t(1)); // Voltage limit hysteresis: 1 V
-  config.set(MIN_VM_MOTOR, uint8_t(3)); // Minimum bus voltage to operate motor: 8 V
-  config.set(MIN_VM_MODE, uint8_t(1)); // Minimum bus voltage mode: clear fault when in bounds
-  config.set(MAX_VM_MOTOR, uint8_t(1)); // Maximum bus voltage to operate motor: 18 V
-  config.set(MAX_VM_MODE, uint8_t(1)); // Maximum bus voltage mode: clear fault when in bounds
-  config.set(VDC_FILTER, uint8_t(1)); // Vdc(VM) filter cut-off frequency: factory default
-  config.set(MAX_POWER, uint16_t(max_power_from_watts(BOARD_DC_BUS_MAX_POWER_WATTS))); // Maximum bus power
+  config.set(BUS_VOLT, 1u); // Bus voltage configuration: 30 V maximum
+  config.set(VOLTAGE_HYSTERESIS, 1u); // Voltage limit hysteresis: 1 V
+  config.set(MIN_VM_MOTOR, 3u); // Minimum bus voltage to operate motor: 8 V
+  config.set(MIN_VM_MODE, 1u); // Minimum bus voltage mode: clear fault when in bounds
+  config.set(MAX_VM_MOTOR, 1u); // Maximum bus voltage to operate motor: 18 V
+  config.set(MAX_VM_MODE, 1u); // Maximum bus voltage mode: clear fault when in bounds
+  config.set(VDC_FILTER, 1u); // Vdc(VM) filter cut-off frequency: factory default
+  config.set(MAX_POWER, max_power_from_watts(BOARD_DC_BUS_MAX_POWER_WATTS)); // Maximum bus power
   config.set(BUS_POWER_LIMIT_ENABLE, true); // Limit DC bus to `MAX_POWER`: enabled
 
   // Protection circuits
-  config.set(OVP_SEL, uint8_t(19)); // Bus overvoltage level: 22 V
+  config.set(OVP_SEL, 19u); // Bus overvoltage level: 22 V
   config.set(OVP_EN, true); // Bus overvoltage protection: enabled
   config.set(OTW_REP, true); // Overtemperature warning report: enabled, fault at 145 C junction temperature
-  config.set(OCP_DEG, uint8_t(1)); // Overcurrent deglitch time: 0.6 us
-  config.set(OCP_LVL, uint8_t(0)); // Overcurrent level: 16 A
-  config.set(OCP_MODE, uint8_t(0)); // Overcurrent fault mode: report a latched fault
+  config.set(OCP_DEG, 1u); // Overcurrent deglitch time: 0.6 us
+  config.set(OCP_LVL, 0u); // Overcurrent level: 16 A
+  config.set(OCP_MODE, 0u); // Overcurrent fault mode: report a latched fault
 
   // Output pins
   config.set(ALARM_PIN_EN, false); // Alarm pin: disabled
-  config.set(FG_SEL, uint8_t(0)); // FG output select: output in ISD, open loop, and closed loop
-  config.set(FG_CONFIG, uint8_t(0)); // FG output configuration: FG active as long as the motor is driven
+  config.set(FG_SEL, 0u); // FG output select: output in ISD, open loop, and closed loop
+  config.set(FG_CONFIG, 0u); // FG output configuration: FG active as long as the motor is driven
   // N/A: FG_BEMF_THR: only for FG_CONFIG in BEMF threshold mode
   // N/A: FG_IDLE_CONFIG: nothing connected to FG pin
   // N/A: FG_FAULT_CONFIG: nothing connected to FG pin
   // N/A: DAC_SOx_SEL: nothing connected to DAC pins
 
   // EEPROM
-  config.set(EEP_FAULT_MODE, uint8_t(0)); // EEPROM fault mode: latched fault
-  config.set(EEPROM_LOCK_MODE, uint8_t(0)); // EEPROM lock mode: disabled
+  config.set(EEP_FAULT_MODE, 0u); // EEPROM fault mode: latched fault
+  config.set(EEPROM_LOCK_MODE, 0u); // EEPROM lock mode: disabled
   // N/A: EEPROM_LOCK_KEY: EEPROM is not locked
 
   // Miscellaneous
-  config.set(SPEED_PIN_GLITCH_FILTER, uint8_t(1)); // Speed pin glitch filter: 0.2 us
-  config.set(SLEW_RATE_I2C_PINS, uint8_t(0)); // I2C slew rate: 4.8 mA, factory default
+  config.set(SPEED_PIN_GLITCH_FILTER, 1u); // Speed pin glitch filter: 0.2 us
+  config.set(SLEW_RATE_I2C_PINS, 0u); // I2C slew rate: 4.8 mA, factory default
   config.set(PULLUP_ENABLE, false); // Internal pull-ups: disabled
-  config.set(CRC_ERR_MODE, uint8_t(0)); // CRC error mode: latched fault
+  config.set(CRC_ERR_MODE, 0u); // CRC error mode: latched fault
   config.set(SATURATION_FLAGS_EN, false); // Indicate current loop and speed loop saturation: disabled
   config.set(EXT_CLK_EN, false); // External clock: disabled
   // N/A: EXT_CLK_CONFIG: no external clock to configure
