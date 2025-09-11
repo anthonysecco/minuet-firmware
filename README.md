@@ -18,9 +18,11 @@ The [minuet](./minuet) directory contains several more configuration YAML files 
 
 ### How to modify the firmware
 
-Here's how to get started.
+The Minuet firmware uses [ESPHome](https://esphome.io/).  This guide assumes that you will be using ESPHome and that you are somewhat familiar with it already or are willing to learn.
 
-- Familiarize yourself with the [ESPHome](https://esphome.io/) tools you will be using to compile and run the code.
+To get started, you will need to install the ESPHome tools either in [Home Assistant](https://esphome.io/guides/getting_started_hassio) or on the [command-line](https://esphome.io/guides/getting_started_command_line).  You may also find the [Samba share](https://github.com/home-assistant/addons/blob/master/samba/DOCS.md) and [File Editor](https://github.com/home-assistant/addons/blob/master/configurator/DOCS.md) Home Assistant add-ons helpful for transferring and editing files.
+
+- Familiarize yourself with the [ESPHome](https://esphome.io/) tools that you will be using to build the firmware.
 - Download the most recent contents of this repository.
 - Make a copy of `minuet.yaml` with a name of your choice, such as `my_minuet.yaml`.  Or [use `minuet.yaml` as a package](#advanced-configuration-using-minuetyaml-as-a-package).
 - Ensure that the `minuet` directory is next to `my_minuet.yaml`.  If you are using the ESPHome Builder add-on for Home Assistant, copy the `minuet` directory into the `/homeassistant/esphome` directory next to `my_minuet.yaml`.
@@ -31,10 +33,10 @@ Here's how to get started.
 - Watch the debug logs to see what's happening.
 
 > [!NOTE]
-> To reset into the bootloader when flashing the firmware over USB, press and hold the `BOOT` button then tap `RESET`.  This step should only be needed the first time the device is being flashed.  The device must be powered by a 12 V (nominal) supply to operate; it is not powered from USB.
+> The device must be powered by 12 V DC nominal supply (100 mA minimum recommended) for programming; it is not powered from USB.  If the ESPHome tools are having trouble connecting to the device to flash the firmware over USB, confirm the serial port path then reset into the bootloader and try again.  To reset into the bootloader, press and hold the `BOOT` button, tap `RESET`, then release `BOOT`.
 
 > [!TIP]
-> We recommend compiling your WiFi SSID and password into the firmware during development (instead of relying on the captive portal WiFi setup method) to ensure that your device can still connect to your WiFi network after a factory reset of the non-volatile storage.
+> We recommend compiling your WiFi SSID and password into the firmware during development (instead of relying on the captive portal WiFi setup method) to ensure that your device can still connect to your WiFi network after a factory reset of the non-volatile storage.  Use over-the-air software updates to avoid removing the Minuet circuit board from your fan just to access the USB port for programming.
 
 ### Packages
 
