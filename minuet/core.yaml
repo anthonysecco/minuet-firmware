@@ -241,6 +241,9 @@ minuet_fan_driver:
             then:
               - delay: 2s # Allow time for the fault to resolve itself if it's transient or there's an automtic retry configured
               - logger.log: "Stopped the fan due to a persistent fault"
+              - script.execute:
+                  id: minuet_tone
+                  name: "!fan_driver_fault"
               - fan.turn_off: minuet_fan
 
 ### PACKAGE: COVER MOTOR DRIVER
@@ -666,6 +669,7 @@ minuet_tone:
       "!power_on_default:d=16,o=4,b=144:32e6,32f6,32e6,32d6,8e6,8a5",
       "!factory_reset:d=16,o=4,b=144:8e6,8a5,8e5,4a4",
       "!failsafe_restart:d=16,o=4,b=144:32e6,32p,32e6,32p,32e6,32p,32e6,32p,4e6",
+      "!fan_driver_fault:d=16,o=4,b=144:32e6,32p,32e6,32p,32e6",
     minuet_tone_default_if_unknown: "beep"
   output:
     - id: minuet_tone_pwm
