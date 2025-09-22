@@ -1675,10 +1675,13 @@ minuet_cover_controller:
             id(minuet_cover_motor_open).set_state(open);
             id(minuet_cover_motor_sleep).turn_off();
         # Wait for the motor to stall at end of travel or for a timeout to expire
+        # The rain cover lid typically takes about 6 seconds to reach end of travel
+        # The low profile lid typically takes about 12 seconds to reach end of travel
+        # FIXME: Improve stall detection to allow the use of a single timeout for all lids
         - wait_until:
             condition:
               binary_sensor.is_on: minuet_cover_motor_fault
-            timeout: 6s
+            timeout: 6s # Change if you have a different lid
         # Stop the motor and report completion
         - lambda: |-
             id(minuet_cover_motor_sleep).turn_on();
