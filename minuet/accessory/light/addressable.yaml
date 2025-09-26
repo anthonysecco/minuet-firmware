@@ -7,11 +7,11 @@
 #
 # Variables:
 #   - Set `minuet_light_accessory_board_version` according to the silkscreen label
-#     printed on your light accessory board, e.g. 'v3_0'.
+#     printed on your light accessory board, e.g. "v3_0".
 #   - Set `minuet_led_strip` to one of the keys in the `minuet_light_config` table.
 defaults:
-  minuet_light_accessory_board_version: 'unknown'
-  minuet_led_strip: 'unknown'
+  minuet_light_accessory_board_version: "unknown"
+  minuet_led_strip: "unknown"
 
 minuet_light:
   substitutions:
@@ -51,7 +51,7 @@ minuet_light:
   # Light component.
   light:
     - id: minuet_light
-      name: 'Light'
+      name: "Light"
       platform: esp32_rmt_led_strip
       pin: ${minuet_light_pin_data}
       restore_mode: ALWAYS_OFF
@@ -70,7 +70,7 @@ minuet_light:
         - addressable_twinkle:
         - pulse:
         - lambda:
-            name: Fade
+            name: "Fade"
             update_interval: 20ms
             lambda: |-
               auto color = esphome::light::ESPHSVColor((millis() / 80) & 0xff, 255, 255).to_rgb();
@@ -82,7 +82,7 @@ minuet_light:
                   .set_publish(false)
                   .perform();
         - lambda:
-            name: Random
+            name: "Random"
             update_interval: 7s
             lambda: |-
               auto color = esphome::light::ESPHSVColor(random_uint32() & 0xff, 255, 255).to_rgb();

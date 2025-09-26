@@ -31,11 +31,11 @@ packages:
   #
   # Variables:
   #   - Set `minuet_board_version` according to the silkscreen label on your
-  #     Minuet circuit board, e.g. 'v3_0'.
+  #     Minuet circuit board, e.g. "v3_0".
   <<: !include
     file: minuet/core.yaml
     vars:
-      minuet_board_version: 'v3_0'
+      minuet_board_version: "v3_0"
 
   ### PACKAGE COLLECTION: ACCESSORIES
   #
@@ -49,14 +49,14 @@ packages:
   <<: !include
     file: minuet/accessory/light/addressable.yaml
     vars:
-      minuet_light_accessory_board_version: 'v3_0'
-      minuet_led_strip: 'btf_sk6812_rgbw_60'
+      minuet_light_accessory_board_version: "v3_0"
+      minuet_led_strip: "btf_sk6812_rgbw_60"
 
   # Minuet light accessory with a PWM dimmable light connected to it.
   # <<: !include
   #   file: minuet/accessory/light/dimmable.yaml
   #   vars:
-  #     minuet_light_accessory_board_version: 'v3_0'
+  #     minuet_light_accessory_board_version: "v3_0"
 
   ### PACKAGE: NETWORK
   #
@@ -173,8 +173,8 @@ packages:
       # Example: SCD4x carbon dioxide, temperature, and relative humidity sensor
       # - platform: scd4x
       #   co2:
-      #     name: 'Cabin CO2'
+      #     name: "Cabin CO2"
       #   temperature:
-      #     name: 'Cabin Temperature'
+      #     name: "Cabin Temperature"
       #   humidity:
-      #     name: 'Cabin Humidity'
+      #     name: "Cabin Humidity"
