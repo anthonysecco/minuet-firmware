@@ -29,13 +29,55 @@ packages:
   #
   # Configures the hardware and implements core features.
   #
-  # Variables:
+  # Required variables:
   #   - Set `minuet_board_version` according to the silkscreen label on your
   #     Minuet circuit board, e.g. "v3_0".
+  #
+  # Optional variables:
+  #   - Set `minuet_indoor_ambient_temperature_sensor_id` to provide the
+  #     indoor ambient temperature in Celsius.
+  #     Defaults to "minuet_ambient_temperature" for the built-in thermistor.
+  #   - Set `minuet_indoor_relative_humidity_sensor_id` to provide the
+  #     indoor relative humidity in percent.
+  #     Defaults to "" for none.
+  #   - Set `minuet_indoor_co2_sensor_id` to provide the
+  #     indoor carbon dioxide concentration in ppm.
+  #     Defaults to "" for none.
+  #   - Set `minuet_indoor_aqi_sensor_id` to provide the
+  #     indoor air quality index.
+  #     Defaults to "" for none.
+  #   - Set `minuet_outdoor_ambient_temperature_sensor_id` to provide the
+  #     outdoor ambient temperature in Celsius.
+  #     Defaults to "" for none.
+  #   - Set `minuet_outdoor_relative_humidity_sensor_id` to provide the
+  #     outdoor relative humidity in percent.
+  #     Defaults to "" for none.
+  #   - Set `minuet_outdoor_aqi_sensor_id` to provide the
+  #     outdoor air quality index.
+  #     Defaults to "" for none.
+  #   - Set `minuet_thermostat_home_preset_temperature` to the default temperature
+  #     for the Home preset.
+  #     Defaults to "78°F".
+  #   - Set `minuet_thermostat_sleep_preset_temperature` to the default temperature
+  #     for the Sleep preset.
+  #     Defaults to "78°F".
+  #   - Set `minuet_thermostat_away_preset_temperature` to the default temperature
+  #     for the Away preset.
+  #     Defaults to "95°F".
   <<: !include
     file: minuet/core.yaml
     vars:
       minuet_board_version: "v3_0"
+      # minuet_indoor_ambient_temperature_sensor_id: "minuet_ambient_temperature"
+      # minuet_indoor_relative_humidity_sensor_id: ""
+      # minuet_indoor_co2_sensor_id: ""
+      # minuet_indoor_aqi_sensor_id: ""
+      # minuet_outdoor_ambient_temperature_sensor_id: ""
+      # minuet_outdoor_relative_humidity_sensor_id: ""
+      # minuet_outdoor_aqi_sensor_id: ""
+      # minuet_thermostat_home_preset_temperature: "78°F"
+      # minuet_thermostat_sleep_preset_temperature: "78°F"
+      # minuet_thermostat_away_preset_temperature: "95°F"
 
   ### PACKAGE COLLECTION: ACCESSORIES
   #

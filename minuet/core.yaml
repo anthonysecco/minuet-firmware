@@ -3,11 +3,53 @@
 #
 # Configures the hardware and implements core features.
 #
-# Variables:
+# Required variables:
 #   - Set `minuet_board_version` according to the silkscreen label on your
 #     Minuet circuit board, e.g. "v3_0".
+#
+# Optional variables:
+#   - Set `minuet_indoor_ambient_temperature_sensor_id` to provide the
+#     indoor ambient temperature in Celsius.
+#     Defaults to "minuet_ambient_temperature" for the built-in thermistor.
+#   - Set `minuet_indoor_relative_humidity_sensor_id` to provide the
+#     indoor relative humidity in percent.
+#     Defaults to "" for none.
+#   - Set `minuet_indoor_co2_sensor_id` to provide the
+#     indoor carbon dioxide concentration in ppm.
+#     Defaults to "" for none.
+#   - Set `minuet_indoor_aqi_sensor_id` to provide the
+#     indoor air quality index.
+#     Defaults to "" for none.
+#   - Set `minuet_outdoor_ambient_temperature_sensor_id` to provide the
+#     outdoor ambient temperature in Celsius.
+#     Defaults to "" for none.
+#   - Set `minuet_outdoor_relative_humidity_sensor_id` to provide the
+#     outdoor relative humidity in percent.
+#     Defaults to "" for none.
+#   - Set `minuet_outdoor_aqi_sensor_id` to provide the
+#     outdoor air quality index.
+#     Defaults to "" for none.
+#   - Set `minuet_thermostat_home_preset_temperature` to the default temperature
+#     for the Home preset.
+#     Defaults to "78°F".
+#   - Set `minuet_thermostat_sleep_preset_temperature` to the default temperature
+#     for the Sleep preset.
+#     Defaults to "78°F".
+#   - Set `minuet_thermostat_away_preset_temperature` to the default temperature
+#     for the Away preset.
+#     Defaults to "95°F".
 defaults:
   minuet_board_version: "unknown"
+  minuet_indoor_ambient_temperature_sensor_id: "minuet_ambient_temperature"
+  minuet_indoor_relative_humidity_sensor_id: ""
+  minuet_indoor_co2_sensor_id: ""
+  minuet_indoor_aqi_sensor_id: ""
+  minuet_outdoor_ambient_temperature_sensor_id: ""
+  minuet_outdoor_relative_humidity_sensor_id: ""
+  minuet_outdoor_aqi_sensor_id: ""
+  minuet_thermostat_home_preset_temperature: "78°F"
+  minuet_thermostat_sleep_preset_temperature: "78°F"
+  minuet_thermostat_away_preset_temperature: "95°F"
 
 ### PACKAGE: PROJECT
 #
@@ -17,7 +59,7 @@ minuet_project:
   esphome:
     project:
       name: "brown-studios.minuet"
-      version: "3.0.0"
+      version: "3.0.1"
   dashboard_import:
     package_import_url: "github://brown-studios/minuet-firmware/minuet.yaml@main"
     import_full_config: true
@@ -31,6 +73,7 @@ minuet_build:
     includes:
       - minuet/core.h
       - minuet/fan_driver.h
+      - minuet/governor.h
     platformio_options:
       build_flags: >
         -Wno-packed-bitfield-compat
@@ -298,6 +341,7 @@ minuet_ambient_temperature_sensor:
       configuration: DOWNSTREAM
       resistor: 10kOhm
     - id: minuet_ambient_temperature
+      name: "Ambient Temperature"
       platform: ntc
       sensor: minuet_thermistor_resistance
       calibration:
@@ -1044,7 +1088,7 @@ minuet_keypad_control:
             if (menu == Menu::ENHANCED || menu == Menu::STANDARD_AUTO) {
               auto& therm = id(minuet_thermostat);
               therm->make_call()
-                  .set_target_temperature(fahrenheit_to_celsius(${minuet_thermostat_default_temperature}))
+                  .set_target_temperature(fahrenheit_to_celsius(${minuet_thermostat_reset_temperature | replace('°F', '')}))
                   .set_fan_mode(ClimateFanMode::CLIMATE_FAN_AUTO)
                   .perform();
               id(minuet_tone)->execute("auto_temp_default");
@@ -1714,10 +1758,17 @@ minuet_lid_controller:
 # This design was chosen so that the fan and lid entities always reflect the true
 # state of the device (insofar as it knows) and it ensures a smooth handoff of control back
 # to the user when the thermostat is disabled or overridden.
+#
+# The thermostat setpoint is defined in steps of 1°F to match the behavior of the original
+# fan controller.  While it may be tempting to switch everything to °C, changing the units
+# could result in subtle incompatibility with the IR remote control.
 minuet_thermostat:
   substitutions:
-    minuet_thermostat_default_temperature: "78"
-    minuet_thermostat_default_temperature_unoccupied: "95"
+    # The temperature used when the thermostat is reset or set to the 'Off' preset.
+    # This number is printed on the keypad label and in the user guide and it serves as the
+    # starting point for the user to set the desired temperature with the up/down buttons.
+    # Don't change the reset temperature value.
+    minuet_thermostat_reset_temperature: "78°F"
   globals:
     - id: minuet_thermostat_override
       type: bool
@@ -1732,6 +1783,10 @@ minuet_thermostat:
       restore_value: false
       initial_value: "true"
     - id: minuet_thermostat_auto_lid_open
+      type: bool
+      restore_value: false
+      initial_value: "false"
+    - id: minuet_thermostat_auto_ready
       type: bool
       restore_value: false
       initial_value: "false"
@@ -1768,12 +1823,25 @@ minuet_thermostat:
       on_value:
         then:
           - script.execute: minuet_thermostat_update
+    - id: minuet_thermostat_lid_mode
+      platform: template
+      name: "Thermostat Lid Mode"
+      entity_category: config
+      optimistic: true
+      restore_value: true
+      options:
+        - Auto
+        - Keep open
+        - Keep closed
+      on_value:
+        then:
+          - script.execute: minuet_thermostat_update
   climate:
     - id: minuet_thermostat
       name: "Thermostat"
       icon: mdi:thermostat-auto
       platform: thermostat
-      sensor: minuet_ambient_temperature
+      sensor: minuet_ambient_temperature # Overridden by the governor package
       visual: # The IR remote uses Fahrenheit natively and expects the fan to do so as well
         min_temperature: 29°F
         max_temperature: 99°F
@@ -1820,19 +1888,38 @@ minuet_thermostat:
         - name: 'Off'
           mode: 'off'
           fan_mode: 'auto'
-          default_target_temperature_high: ${minuet_thermostat_default_temperature} °F
+          # lid_mode: Auto
+          default_target_temperature_high: ${minuet_thermostat_reset_temperature}
         - name: 'Home'
           mode: 'cool'
           fan_mode: 'auto'
-          default_target_temperature_high: ${minuet_thermostat_default_temperature} °F
+          # lid_mode: Auto
+          default_target_temperature_high: ${minuet_thermostat_home_preset_temperature}
         - name: 'Sleep'
           mode: 'cool'
           fan_mode: 'quiet'
-          default_target_temperature_high: ${minuet_thermostat_default_temperature} °F
+          # lid_mode: Keep open
+          default_target_temperature_high: ${minuet_thermostat_sleep_preset_temperature}
         - name: 'Away'
           mode: 'cool'
           fan_mode: 'low'
-          default_target_temperature_high: ${minuet_thermostat_default_temperature_unoccupied} °F
+          # lid_mode: Auto
+          default_target_temperature_high: ${minuet_thermostat_away_preset_temperature}
+        - name: 'Passive'
+          mode: 'cool'
+          fan_mode: 'off'
+          # lid_mode: Auto
+          default_target_temperature_high: ${minuet_thermostat_reset_temperature}
+      preset_change:
+        then:
+          - lambda: |-
+              const auto& therm = id(minuet_thermostat);
+              auto& lid_mode = id(minuet_thermostat_lid_mode);
+              if (therm->preset == ClimatePreset::CLIMATE_PRESET_SLEEP) {
+                lid_mode->make_call().set_index(1).perform();
+              } else {
+                lid_mode->make_call().set_index(0).perform();
+              }
       default_preset: 'Off'
       on_boot_restore_from: memory
   switch:
@@ -1902,45 +1989,32 @@ minuet_thermostat:
       then:
         - lambda: |-
             const auto& therm = id(minuet_thermostat);
+            auto& auto_ready = id(minuet_thermostat_auto_ready);
+            auto& poll = id(minuet_thermostat_poll);
             if (therm->mode != CLIMATE_MODE_OFF && !id(minuet_thermostat_override) && !id(minuet_safety_lock).state) {
-              auto& auto_fan_speed = id(minuet_thermostat_auto_fan_speed);
-              auto& auto_fan_exhaust = id(minuet_thermostat_auto_fan_exhaust);
-              auto& auto_lid_open = id(minuet_thermostat_auto_lid_open);
-              if (id(minuet_thermostat).action == CLIMATE_ACTION_COOLING) {
-                // Determine an appropriate fan speed to enhance the thermal comfort of the occupants based on the
-                // difference between the ambient temperature and target temperature and the user's specified fan mode.
-                // We don't have a lot of information for this calculation and the target temperature may not be
-                // achievable when it's too hot outdoors so a PID controller may not be of much use here as it would
-                // likely always saturate.  So the goal is simply to provide enough airflow efficiently.
-                //
-                // TODO: Choose a less arbitrary transfer function.
-                // TODO: Control the fan speed over a continuous range of values instead of in discrete steps?
-                const float ambient_temperature = therm->current_temperature;
-                const float target_temperature = therm->target_temperature;
-                const float delta = ambient_temperature - target_temperature;
-                auto_fan_speed = delta > 0.f ? int(std::ceil(delta / 2.f)) : 0;
-                switch (therm->fan_mode.value_or(CLIMATE_FAN_AUTO)) {
-                  case CLIMATE_FAN_OFF:
-                    auto_fan_speed = 0;
-                    break;
-                  case CLIMATE_FAN_LOW:
-                    auto_fan_speed = 1;
-                    break;
-                  case CLIMATE_FAN_QUIET:
-                    auto_fan_speed = std::clamp(auto_fan_speed, 0, 3);
-                    break;
-                  case CLIMATE_FAN_AUTO:
-                  default:
-                    auto_fan_speed = std::clamp(auto_fan_speed, 0, 6);
-                    break;
-                }
-                auto_lid_open = true;
-              } else {
-                auto_fan_speed = 0;
-                auto_lid_open = false;
+              if (!auto_ready) {
+                minuet::governor::reset();
+                poll->start_poller();
+                auto_ready = true;
               }
+              minuet::governor::ControlInput input = {
+                .ambient_temperature = therm->current_temperature,
+                .target_temperature = therm->target_temperature,
+                .action = therm->action,
+                .fan_mode = therm->fan_mode.value_or(CLIMATE_FAN_AUTO),
+                .lid_mode = minuet::governor::LidMode(id(minuet_thermostat_lid_mode).active_index().value_or(0)),
+              };
+              minuet::governor::ControlOutput output = minuet::governor::update(input);
+
+              auto& auto_fan_speed = id(minuet_thermostat_auto_fan_speed);
+              auto_fan_speed = std::clamp(output.fan_speed, 0, 10);
+
+              auto& auto_lid_open = id(minuet_thermostat_auto_lid_open);
+              auto_lid_open = output.lid_open;
+
               const auto& state = minuet::persistent_state();
               const auto& direction_index = id(minuet_thermostat_fan_direction).active_index();
+              auto& auto_fan_exhaust = id(minuet_thermostat_auto_fan_exhaust);
               auto_fan_exhaust = direction_index == 1 ? true :
                   direction_index == 2 ? false : state.fan_exhaust;
 
@@ -1952,6 +2026,49 @@ minuet_thermostat:
                     /*suppress_lid_movement*/ true, /*force*/ false);
                 id(minuet_lid_set).execute(auto_lid_open, /*force*/ false);
               });
+            } else {
+              auto_ready = false;
+              poll->stop_poller();
+            }
+  interval:
+    - id: minuet_thermostat_poll
+      interval: 1s
+      setup_priority: 400
+      then:
+        lambda: |-
+          id(minuet_thermostat_update).execute();
+
+### PACKAGE: GOVERNOR
+#
+# Configures the governor module in `governor.h`.
+minuet_governor:
+  esphome:
+    on_boot:
+      - priority: 2000
+        then:
+        - lambda: |-
+            // Configure the governor
+            <% macro assign_from_id(name, value) %>
+              <% if value != '' %>
+                minuet::governor::${name} = id(${value});
+              <% else %>
+                minuet::governor::${name} = nullptr;
+              <% endif %>
+            <% endmacro %>
+            ${ assign_from_id('indoor_ambient_temperature_sensor', minuet_indoor_ambient_temperature_sensor_id) }
+            ${ assign_from_id('indoor_relative_humidity_sensor', minuet_indoor_relative_humidity_sensor_id) }
+            ${ assign_from_id('indoor_co2_sensor', minuet_indoor_co2_sensor_id) }
+            ${ assign_from_id('indoor_aqi_sensor', minuet_indoor_aqi_sensor_id) }
+            ${ assign_from_id('outdoor_ambient_temperature_sensor', minuet_outdoor_ambient_temperature_sensor_id) }
+            ${ assign_from_id('outdoor_relative_humidity_sensor', minuet_outdoor_relative_humidity_sensor_id) }
+            ${ assign_from_id('outdoor_aqi_sensor', minuet_outdoor_aqi_sensor_id) }
+
+            // Use the same sensors for the thermostat
+            if (minuet::governor::indoor_ambient_temperature_sensor) {
+              id(minuet_thermostat).set_sensor(minuet::governor::indoor_ambient_temperature_sensor);
+            }
+            if (minuet::governor::indoor_relative_humidity_sensor) {
+              id(minuet_thermostat).set_humidity_sensor(minuet::governor::indoor_relative_humidity_sensor);
             }
 
 ### PACKAGE: PERSISTENCE
