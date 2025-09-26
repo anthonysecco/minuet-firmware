@@ -18,7 +18,7 @@ esphome:
 # Set `baud_rate` to 921600 to enable serial port log output for debugging.
 logger:
   level: DEBUG
-  baud_rate: 0
+  baud_rate: 921600
 
 # The configuration is organized into ESPHome packages that group related configuration
 # elements together for ease of maintenance.  Follow the instructions in the comments
