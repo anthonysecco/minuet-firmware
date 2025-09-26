@@ -447,7 +447,7 @@ minuet_battery_monitor:
 minuet_rain_sensor:
   binary_sensor:
     - id: minuet_rain
-      name: "Rain Detected"
+      name: "Rain Sensor"
       icon: mdi:weather-rainy
       device_class: moisture
       entity_category: diagnostic
