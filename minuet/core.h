@@ -23,12 +23,12 @@ void perform_transient_operation(T func) {
   transient_operation_depth--;
 }
 
-// Records the state of the fan and cover as it was most recently set by the user, disregarding transient operations.
+// Records the state of the fan and lid as it was most recently set by the user, disregarding transient operations.
 struct PersistentState {
   bool fan_on : 1 {false};
   unsigned fan_speed : 4 {1};
   bool fan_exhaust : 1 {true};
-  bool cover_open : 1 {false};
+  bool lid_open : 1 {false};
 
   // The storage hack is needed because ESPHome global declarations cannot refer to types in user-defined include files.
   using Storage = typename std::remove_reference<decltype(*minuet_persistent_state_raw)>::type::value_type;

@@ -246,12 +246,12 @@ minuet_fan_driver:
                   name: "!fan_driver_fault"
               - fan.turn_off: minuet_fan
 
-### PACKAGE: COVER MOTOR DRIVER
+### PACKAGE: LID MOTOR DRIVER
 #
-# Interfaces with the cover motor DRV8876 driver chip.
-minuet_cover_motor_driver:
+# Interfaces with the lid motor DRV8876 driver chip.
+minuet_lid_motor_driver:
   binary_sensor:
-    - id: minuet_cover_motor_fault
+    - id: minuet_lid_motor_fault
       platform: gpio
       pin:
         pca9554: minuet_xio
@@ -261,14 +261,14 @@ minuet_cover_motor_driver:
       trigger_on_initial_state: true
       use_interrupt: false
   output:
-    - id: minuet_cover_motor_sleep
+    - id: minuet_lid_motor_sleep
       platform: gpio
       pin:
         pca9554: minuet_xio
         number: 10
         mode: output
         inverted: true
-    - id: minuet_cover_motor_open
+    - id: minuet_lid_motor_open
       platform: gpio
       pin:
         pca9554: minuet_xio
@@ -474,8 +474,8 @@ minuet_rain_sensor:
             const bool rain_stopped_fan = id(minuet_rain_stopped_fan).state;
             const bool rain_sensor_enabled = id(minuet_rain_sensor_enabled).state;
             const auto& fan = id(minuet_fan);
-            const auto& cover = id(minuet_cover);
-            if (!rain_stopped_fan && rain_sensor_enabled && rain && (fan->state || minuet::cover_is_open_or_opening(cover))) {
+            const auto& lid = id(minuet_lid);
+            if (!rain_stopped_fan && rain_sensor_enabled && rain && (fan->state || minuet::cover_is_open_or_opening(lid))) {
               ESP_LOGI(minuet::TAG, "Rain sensor detected rain and activated the safety lock to stop the fan");
               id(minuet_rain_stopped_fan).publish_state(true);
             }
@@ -484,7 +484,7 @@ minuet_rain_sensor:
       mode: queued
       then:
         - lambda: |-
-            // A fan or cover operation was aborted due to a safety lock, check whether the rain safety lock
+            // A fan or lid operation was aborted due to a safety lock, check whether the rain safety lock
             // contributed to the situation and set rain stopped fan to make the rain indicator flash.
             if (id(minuet_rain_safety_lock).state) {
               id(minuet_rain_stopped_fan).publish_state(true);
@@ -493,8 +493,8 @@ minuet_rain_sensor:
 ### PACKAGE: SAFETY LOCK
 #
 # Aggregates the individual safety lock reasons.
-# Stops the fan and closes the cover when a safety lock is triggered.
-# Inhibits fan and cover operation until all safety lock are released.
+# Stops the fan and closes the lid when a safety lock is triggered.
+# Inhibits fan and lid operation until all safety lock are released.
 minuet_safety_lock:
   binary_sensor:
     - id: minuet_accessory_safety_lock
@@ -576,17 +576,17 @@ minuet_safety_lock:
               id(minuet_safety_lock_reason).publish_state(reason);
             }
 
-            // Turn the fan off and close the cover when the safety lock is engaged.
+            // Turn the fan off and close the lid when the safety lock is engaged.
             const auto& fan = id(minuet_fan);
-            const auto& cover = id(minuet_cover);
-            if (locked && (fan->state || minuet::cover_is_open_or_opening(cover))) {
-              ESP_LOGI(minuet::TAG, "Safety lock stopped the fan and closed the cover: %s safety lock active", reason);
+            const auto& lid = id(minuet_lid);
+            if (locked && (fan->state || minuet::cover_is_open_or_opening(lid))) {
+              ESP_LOGI(minuet::TAG, "Safety lock stopped the fan and closed the lid: %s safety lock active", reason);
               minuet::perform_transient_operation([=] {
                 if (fan->state) {
                   fan->make_call().set_state(false).perform();
                 }
-                if (minuet::cover_is_open_or_opening(cover)) {
-                  cover->make_call().set_command_close().perform();
+                if (minuet::cover_is_open_or_opening(lid)) {
+                  lid->make_call().set_command_close().perform();
                 }
               });
             }
@@ -643,8 +643,8 @@ minuet_tone:
       "manual_speed_down:",
       "manual_dir_in:",
       "manual_dir_out:",
-      "manual_cover_open:",
-      "manual_cover_close:",
+      "manual_lid_open:",
+      "manual_lid_close:",
       "auto_on:",
       "auto_off:",
       "auto_temp_up:d=16,o=4,b=144:e6,g6",
@@ -950,25 +950,25 @@ minuet_keypad_control:
           const auto do_press_open_close = [which_menu]() {
             const auto menu = which_menu();
             if (menu != Menu::STANDARD_AUTO) {
-              auto& cover = id(minuet_cover);
-              if (id(minuet_cover).is_fully_closed()) {
-                cover->make_call().set_command_open().perform();
-                id(minuet_tone)->execute("manual_cover_open");
+              auto& lid = id(minuet_lid);
+              if (id(minuet_lid).is_fully_closed()) {
+                lid->make_call().set_command_open().perform();
+                id(minuet_tone)->execute("manual_lid_open");
               } else {
-                cover->make_call().set_command_close().perform();
-                id(minuet_tone)->execute("manual_cover_close");
+                lid->make_call().set_command_close().perform();
+                id(minuet_tone)->execute("manual_lid_close");
               }
             }
           };
           const auto do_press_4_open = [which_menu]() {
-            auto& cover = id(minuet_cover);
-            cover->make_call().set_command_open().perform();
-            id(minuet_tone)->execute("manual_cover_open");
+            auto& lid = id(minuet_lid);
+            lid->make_call().set_command_open().perform();
+            id(minuet_tone)->execute("manual_lid_open");
           };
           const auto do_press_4_close = [which_menu]() {
-            auto& cover = id(minuet_cover);
-            cover->make_call().set_command_close().perform();
-            id(minuet_tone)->execute("manual_cover_close");
+            auto& lid = id(minuet_lid);
+            lid->make_call().set_command_close().perform();
+            id(minuet_tone)->execute("manual_lid_close");
           };
           const auto do_press_direction = [which_menu]() {
             auto& fan = id(minuet_fan);
@@ -1386,7 +1386,7 @@ minuet_ir_control:
       on_maxxfan:
         then:
           lambda: |-
-            auto& cover = id(minuet_cover);
+            auto& lid = id(minuet_lid);
             auto& fan = id(minuet_fan);
             auto& therm = id(minuet_thermostat);
             if (x.auto_mode) {
@@ -1406,8 +1406,8 @@ minuet_ir_control:
                   .perform();
               const bool fan_changing_states = fan->state != x.fan_on;
               id(minuet_fan_set).execute(x.fan_on, x.fan_speed / 10, x.fan_exhaust,
-                  /*suppress_cover_movement*/ true, /*force*/ false);
-              id(minuet_cover_set).execute(x.cover_open, fan_changing_states);
+                  /*suppress_lid_movement*/ true, /*force*/ false);
+              id(minuet_lid_set).execute(x.cover_open, fan_changing_states);
             }
             id(minuet_tone)->execute(x.warn ? "ir_warn" : "ir_confirm");
       on_nec:
@@ -1426,7 +1426,7 @@ minuet_ir_control:
 #   - FanDirection::FORWARD is air in / intake
 minuet_fan_controller:
   globals:
-    - id: minuet_fan_suppress_cover_movement
+    - id: minuet_fan_suppress_lid_movement
       type: bool
       restore_value: false
       initial_value: "false"
@@ -1440,15 +1440,15 @@ minuet_fan_controller:
       on_turn_on:
         then:
           - lambda: |-
-              // Safety lock check: Cover must not open while the lock is on
-              if (!id(minuet_fan_suppress_cover_movement) && !id(minuet_safety_lock).state) {
-                id(minuet_cover).make_call().set_command_open().perform();
+              // Safety lock check: Lid must not open while the lock is on
+              if (!id(minuet_fan_suppress_lid_movement) && !id(minuet_safety_lock).state) {
+                id(minuet_lid).make_call().set_command_open().perform();
               }
       on_turn_off:
         then:
           - lambda: |-
-              if (!id(minuet_fan_suppress_cover_movement)) {
-                id(minuet_cover).make_call().set_command_close().perform();
+              if (!id(minuet_fan_suppress_lid_movement)) {
+                id(minuet_lid).make_call().set_command_close().perform();
               }
       on_state:
         then:
@@ -1542,19 +1542,19 @@ minuet_fan_controller:
         state: bool
         speed: int
         exhaust: bool
-        suppress_cover_movement: bool
+        suppress_lid_movement: bool
         force: bool
       then:
         - lambda: |-
             auto& fan = id(minuet_fan);
             if (force || fan->state != state || fan->speed != speed || fan->direction != minuet::fan_direction(exhaust)) {
-              id(minuet_fan_suppress_cover_movement) = suppress_cover_movement;
+              id(minuet_fan_suppress_lid_movement) = suppress_lid_movement;
               fan->make_call()
                   .set_state(state)
                   .set_speed(speed)
                   .set_direction(minuet::fan_direction(exhaust))
                   .perform();
-              id(minuet_fan_suppress_cover_movement) = false;
+              id(minuet_fan_suppress_lid_movement) = false;
             }
     - id: minuet_fan_control_update
       mode: queued
@@ -1585,20 +1585,20 @@ minuet_fan_controller:
               }
             }
 
-### PACKAGE: COVER CONTROLLER
+### PACKAGE: LID CONTROLLER
 #
 # Defines the high-level cover entity to open or close the lid.
 # Distinguishes between state changes initiated by the user or from internal logic.
-# Tells the cover motor driver what to do.
-minuet_cover_controller:
+# Tells the lid motor driver what to do.
+minuet_lid_controller:
   globals:
-    - id: minuet_cover_movement_interrupted
+    - id: minuet_lid_movement_interrupted
       type: bool
       restore_value: false
       initial_value: "false"
   cover:
-    - id: minuet_cover
-      name: "Cover"
+    - id: minuet_lid
+      name: "Lid"
       device_class: damper
       platform: template
       optimistic: false
@@ -1607,111 +1607,111 @@ minuet_cover_controller:
       open_action:
         then:
           - lambda: |-
-              // Safety lock check: Cover must not open while the lock is on
+              // Safety lock check: Lid must not open while the lock is on
               if (id(minuet_safety_lock).state) {
                 if (!minuet::is_transient_operation()) {
-                  ESP_LOGI(minuet::TAG, "Safety lock prevented cover from being opened: %s safety lock active",
+                  ESP_LOGI(minuet::TAG, "Safety lock prevented lid from being opened: %s safety lock active",
                       id(minuet_safety_lock_reason).state.c_str());
                   id(minuet_tone)->execute("forbidden");
                   id(minuet_rain_safety_lock_maybe_triggered)->execute();
                 }
-              } else if (id(minuet_cover).current_operation != COVER_OPERATION_OPENING) {
-                id(minuet_cover_perform_operation).execute(true);
+              } else if (id(minuet_lid).current_operation != COVER_OPERATION_OPENING) {
+                id(minuet_lid_perform_operation).execute(true);
               }
       close_action:
         then:
           - lambda: |-
-              // Safety lock check: Cover can close regardless of the state of the lock
-              if (id(minuet_cover).current_operation != COVER_OPERATION_CLOSING) {
-                id(minuet_cover_perform_operation).execute(false);
+              // Safety lock check: Lid can close regardless of the state of the lock
+              if (id(minuet_lid).current_operation != COVER_OPERATION_CLOSING) {
+                id(minuet_lid_perform_operation).execute(false);
               }
       toggle_action:
         then:
           - lambda: |-
-              id(minuet_cover_set).execute(id(minuet_cover).is_fully_closed(), /*force*/ false);
+              id(minuet_lid_set).execute(id(minuet_lid).is_fully_closed(), /*force*/ false);
   script:
-    - id: minuet_cover_set
+    - id: minuet_lid_set
       parameters:
         open: bool
         force: bool
       then:
         - lambda: |-
-            auto& cover = id(minuet_cover);
-            if (open && (force || !minuet::cover_is_open_or_opening(cover))) {
-              id(minuet_cover).make_call().set_command_open().perform();
-            } else if (!open && (force || minuet::cover_is_open_or_opening(cover))) {
-              id(minuet_cover).make_call().set_command_close().perform();
+            auto& lid = id(minuet_lid);
+            if (open && (force || !minuet::cover_is_open_or_opening(lid))) {
+              id(minuet_lid).make_call().set_command_open().perform();
+            } else if (!open && (force || minuet::cover_is_open_or_opening(lid))) {
+              id(minuet_lid).make_call().set_command_close().perform();
             }
-    - id: minuet_cover_perform_operation
+    - id: minuet_lid_perform_operation
       mode: restart
       parameters:
         open: bool
       then:
         # Stop the motor first in case the previous operation was interrupted
         - lambda: |-
-            id(minuet_cover_motor_sleep).turn_on();
+            id(minuet_lid_motor_sleep).turn_on();
 
-            const auto& current_op = id(minuet_cover).current_operation;
-            id(minuet_cover_movement_interrupted) =
+            const auto& current_op = id(minuet_lid).current_operation;
+            id(minuet_lid_movement_interrupted) =
                 current_op == COVER_OPERATION_OPENING || current_op == COVER_OPERATION_CLOSING;
 
-            id(minuet_cover).current_operation = open ? COVER_OPERATION_OPENING : COVER_OPERATION_CLOSING;
-            id(minuet_cover).publish_state();
+            id(minuet_lid).current_operation = open ? COVER_OPERATION_OPENING : COVER_OPERATION_CLOSING;
+            id(minuet_lid).publish_state();
 
             if (!minuet::is_transient_operation()) {
-              id(minuet_snapshot_cover_persistent_state).execute();
-              id(minuet_thermostat_reconcile_cover_manual_state_change)->execute(open);
+              id(minuet_snapshot_lid_persistent_state).execute();
+              id(minuet_thermostat_reconcile_lid_manual_state_change)->execute(open);
             }
         # Allow the motor's inertia to settle to avoid prematurely triggering a fault
         # when abruptly changing directions
         - if:
             condition:
-              - lambda: 'return id(minuet_cover_movement_interrupted);'
+              - lambda: 'return id(minuet_lid_movement_interrupted);'
             then:
-              - logger.log: "Cover movement was interrupted, waiting for inertia to settle before changing directions"
+              - logger.log: "Lid movement was interrupted, waiting for inertia to settle before changing directions"
               - delay: 2s
         # Start the motor
         - lambda: |-
-            id(minuet_cover_motor_open).set_state(open);
-            id(minuet_cover_motor_sleep).turn_off();
+            id(minuet_lid_motor_open).set_state(open);
+            id(minuet_lid_motor_sleep).turn_off();
         # Wait for the motor to stall at end of travel or for a timeout to expire
         # The rain cover lid typically takes about 6 seconds to reach end of travel
         # The low profile lid typically takes about 12 seconds to reach end of travel
         # FIXME: Improve stall detection to allow the use of a single timeout for all lids
         - wait_until:
             condition:
-              binary_sensor.is_on: minuet_cover_motor_fault
+              binary_sensor.is_on: minuet_lid_motor_fault
             timeout: 6s # Change if you have a different lid
         # Stop the motor and report completion
         - lambda: |-
-            id(minuet_cover_motor_sleep).turn_on();
+            id(minuet_lid_motor_sleep).turn_on();
 
-            id(minuet_cover).current_operation = COVER_OPERATION_IDLE;
-            id(minuet_cover).position = open ? COVER_OPEN : COVER_CLOSED;
-            id(minuet_cover).publish_state();
+            id(minuet_lid).current_operation = COVER_OPERATION_IDLE;
+            id(minuet_lid).position = open ? COVER_OPEN : COVER_CLOSED;
+            id(minuet_lid).publish_state();
 
 ### PACKAGE: THERMOSTAT
 #
-# Controls the fan and cover based on the ambient temperature, when enabled.
+# Controls the fan and lid based on the ambient temperature, when enabled.
 #
-# Both the user and the thermostat can modify the state of the same fan and cover entities.
+# Both the user and the thermostat can modify the state of the fan and lid.
 # To resolve this conflict, the thermostat sets the transient flag whenever it changes the state so
-# that the fan and cover state change handlers can distinguish whether a given change was initiated
+# that the fan and lid state change handlers can distinguish whether a given change was initiated
 # by the user or by the thermostat.  Only changes made by the user are ever saved to flash.
 # When the thermostat is disabled, it turns the fan off but restores the user's last commanded
 # speed and direction.
 #
 # When using standard controls, the keypad forbids the user from changing the fan speed
-# or cover position while the thermostat is enabled (because that's what the original firmware
+# or lid position while the thermostat is enabled (because that's what the original firmware
 # does).  However, the ESPHome API has no such constraints so if a manual change occurs
 # through that interface then the thermostat is disabled to reconcile who's in charge.
 #
 # When using enhanced controls, the keypad allows the user to take control by incrementally
-# modifying whatever state to which the thermostat last set the fan and cover.  The thermostat
+# modifying whatever state to which the thermostat last set the fan and lid.  The thermostat
 # remains enabled but ignored until the override flag is reset.  The same behavior applies
 # to changes intiated by the ESPHome API.
 #
-# This design was chosen so that the fan and cover entities always reflect the true
+# This design was chosen so that the fan and lid entities always reflect the true
 # state of the device (insofar as it knows) and it ensures a smooth handoff of control back
 # to the user when the thermostat is disabled or overridden.
 minuet_thermostat:
@@ -1731,7 +1731,7 @@ minuet_thermostat:
       type: bool
       restore_value: false
       initial_value: "true"
-    - id: minuet_thermostat_auto_cover_open
+    - id: minuet_thermostat_auto_lid_open
       type: bool
       restore_value: false
       initial_value: "false"
@@ -1811,7 +1811,7 @@ minuet_thermostat:
                 // last commanded speed and direction.
                 const auto& state = minuet::persistent_state();
                 id(minuet_fan_set).execute(false, state.fan_speed, state.fan_exhaust,
-                      /*suppress_cover_movement*/ false, /*force*/ false);
+                      /*suppress_lid_movement*/ false, /*force*/ false);
               }
       on_state:
         then:
@@ -1862,13 +1862,13 @@ minuet_thermostat:
                     && id(minuet_thermostat_fan_direction).active_index() != 0)) {
               id(minuet_thermostat_maybe_set_override).execute();
             }
-    - id: minuet_thermostat_reconcile_cover_manual_state_change
+    - id: minuet_thermostat_reconcile_lid_manual_state_change
       parameters:
-        cover_open: bool
+        lid_open: bool
       then:
         - lambda: |-
             const auto& therm = id(minuet_thermostat);
-            if (id(minuet_thermostat_auto_cover_open) != cover_open) {
+            if (id(minuet_thermostat_auto_lid_open) != lid_open) {
               id(minuet_thermostat_maybe_set_override).execute();
             }
     - id: minuet_thermostat_maybe_set_override
@@ -1880,7 +1880,7 @@ minuet_thermostat:
                 // With enhanced controls, activate override mode
                 ESP_LOGD(minuet::TAG, "Manual state change while thermostat enabled: engaging override");
                 id(minuet_snapshot_fan_persistent_state).execute();
-                id(minuet_snapshot_cover_persistent_state).execute();
+                id(minuet_snapshot_lid_persistent_state).execute();
                 id(minuet_thermostat_override) = true;
                 id(minuet_thermostat_update).execute();
               } else {
@@ -1905,7 +1905,7 @@ minuet_thermostat:
             if (therm->mode != CLIMATE_MODE_OFF && !id(minuet_thermostat_override) && !id(minuet_safety_lock).state) {
               auto& auto_fan_speed = id(minuet_thermostat_auto_fan_speed);
               auto& auto_fan_exhaust = id(minuet_thermostat_auto_fan_exhaust);
-              auto& auto_cover_open = id(minuet_thermostat_auto_cover_open);
+              auto& auto_lid_open = id(minuet_thermostat_auto_lid_open);
               if (id(minuet_thermostat).action == CLIMATE_ACTION_COOLING) {
                 // Determine an appropriate fan speed to enhance the thermal comfort of the occupants based on the
                 // difference between the ambient temperature and target temperature and the user's specified fan mode.
@@ -1934,10 +1934,10 @@ minuet_thermostat:
                     auto_fan_speed = std::clamp(auto_fan_speed, 0, 6);
                     break;
                 }
-                auto_cover_open = true;
+                auto_lid_open = true;
               } else {
                 auto_fan_speed = 0;
-                auto_cover_open = false;
+                auto_lid_open = false;
               }
               const auto& state = minuet::persistent_state();
               const auto& direction_index = id(minuet_thermostat_fan_direction).active_index();
@@ -1949,14 +1949,14 @@ minuet_thermostat:
                     auto_fan_speed != 0,
                     auto_fan_speed != 0 ? auto_fan_speed : state.fan_speed,
                     auto_fan_speed != 0 ? auto_fan_exhaust : state.fan_exhaust,
-                    /*suppress_cover_movement*/ true, /*force*/ false);
-                id(minuet_cover_set).execute(auto_cover_open, /*force*/ false);
+                    /*suppress_lid_movement*/ true, /*force*/ false);
+                id(minuet_lid_set).execute(auto_lid_open, /*force*/ false);
               });
             }
 
 ### PACKAGE: PERSISTENCE
 #
-# Remembers the fan speed, direction, and cover state that the user most recently
+# Remembers the fan speed, direction, and lid state that the user most recently
 # commanded so that it can be restored when the fan is turned back on or after a restart.
 # Transient operations (internal state changes not initiated by the user) do not alter
 # the persistent state.
@@ -1985,12 +1985,12 @@ minuet_persistence:
             state.fan_on = fan->state;
             state.fan_speed = fan->speed;
             state.fan_exhaust = minuet::fan_direction_is_exhaust(fan->direction);
-    - id: minuet_snapshot_cover_persistent_state
+    - id: minuet_snapshot_lid_persistent_state
       then:
         - lambda: |-
-            const auto& cover = id(minuet_cover);
+            const auto& lid = id(minuet_lid);
             auto& state = minuet::persistent_state();
-            state.cover_open = minuet::cover_is_open_or_opening(cover);
+            state.lid_open = minuet::cover_is_open_or_opening(lid);
   esphome:
     on_boot:
       - priority: 1000
@@ -2017,8 +2017,8 @@ minuet_persistence:
               minuet::perform_transient_operation([] {
                 const auto& state = minuet::persistent_state();
                 id(minuet_fan_set).execute(state.fan_on, state.fan_speed, state.fan_exhaust,
-                      /*suppress_cover_movement*/ true, /*force*/ true);
-                id(minuet_cover_set).execute(state.cover_open, /*force*/ true);
+                      /*suppress_lid_movement*/ true, /*force*/ true);
+                id(minuet_lid_set).execute(state.lid_open, /*force*/ true);
               });
 
               // Apply thermostat updates
@@ -2034,7 +2034,7 @@ minuet_shutdown:
         then:
           - lambda: |-
               minuet::fan_driver::controller.shutdown();
-              id(minuet_cover_motor_sleep).turn_on();
+              id(minuet_lid_motor_sleep).turn_on();
 
 ### PACKAGE: FAILSAFE BEHAVIOR
 #
