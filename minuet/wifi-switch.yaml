@@ -45,4 +45,4 @@ esphome:
       then:
       - lambda: |-
           id(minuet_keypad_wifi_switch) = id(minuet_wifi_switch);
-          id(minuet_wifi).set_enable_on_boot(id(minuet_wifi_switch).state);
+          id(minuet_wifi).set_enable_on_boot(false);
