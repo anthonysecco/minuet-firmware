@@ -130,6 +130,7 @@ packages:
       id: minuet_wifi
       power_save_mode: light
       reboot_timeout: 0s
+      output_power: 18 dB # Prevent unexpected restarts in WiFi AP mode (see errata)
       # networks:
       #   - ssid: !secret wifi_ssid
       #     password: !secret wifi_password
