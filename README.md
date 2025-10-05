@@ -119,6 +119,27 @@ Minuet uses these external components for some of its functions.  You can also u
 - [esphome-maxxfan-protocol](https://github.com/brown-studios/esphome-maxxfan-protocol): Maxxfan infrared remote control protocol
 - [esphome-mcf8316](https://github.com/brown-studios/esphome-mcf8316): MCF8316 brushless DC motor driver with field-oriented control
 
+## Implementation notes
+
+### Temperature units
+
+The original Maxxfan thermostat natively uses Fahrenheit temperature units.  The `auto` button on the keypad is labeled `HOLD TO SET 78 °F` or `HOLD TO SET 26 °C` depending on the regional variant and both versions (presumably) set the same temperature (78 °F).  The infrared remote control always sends Fahrenheit temperature units to the controller in 1 °F steps even when configured to display Celsius.
+
+Minuet remains compatible with these original expectations and it expands the range of values to allow finer control for users of both temperature systems when accessed via the API (such as by Home Assistant or an app).  The keypad and remote control behavior is unchanged.  The visual step provides a hint to the user interface about the granularity of the temperature setpoint and that it should be displayed with 1 digit after the decimal point.
+
+| Temperature attribute | Maxxfan                  | Minuet                   |
+| --------------------- | ------------------------ | ------------------------ |
+| Minimum               | 29 °F (approx. -1.67 °C) | 23 °F (exactly -5 °C)    |
+| Maximum               | 99 °F (approx. 37.22 °C) | 122 °F (exactly 50 °C)   |
+| Default               | 78 °F (approx. 25.56 °C) | 78 °F (approx. 25.56 °C) |
+| Keypad step           | 1 °F (approx. 0.56 °C)   | 1 °F (approx. 0.56 °C)   |
+| Remote control step   | 1 °F (approx. 0.56 °C)   | 1 °F (approx. 0.56 °C)   |
+| Visual step           | N/A                      | 0.36 °F (exactly 0.5 °C) |
+
+ESPHome uses Celsius temperature units internally so the Minuet firmware converts the units as required and represents them as single-precision floating point values without rounding.
+
+It's too bad the original designers didn't choose 77 °F as the default because that would have converted to exactly 25 °C.
+
 ## Notice
 
 The Minuet software, documentation, design, and all copyright protected artifacts are released under the terms of the [MIT license](LICENSE).

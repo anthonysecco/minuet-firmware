@@ -883,6 +883,8 @@ minuet_keypad_control:
     - interval: 10ms
       then:
         lambda: |-
+          ${minuet_to_celsius_macro}
+
           // Determine which menu of keypad actions is active.
           enum class Menu {
             STANDARD_MANUAL, STANDARD_AUTO, ENHANCED,
@@ -1079,7 +1081,7 @@ minuet_keypad_control:
             if (menu == Menu::ENHANCED || menu == Menu::STANDARD_AUTO) {
               auto& therm = id(minuet_thermostat);
               therm->make_call()
-                  .set_target_temperature(fahrenheit_to_celsius(${minuet_thermostat_reset_temperature | replace('°F', '')}))
+                  .set_target_temperature(fahrenheit_to_celsius(${to_celsius(minuet_thermostat_reset_temperature)}))
                   .set_fan_mode(ClimateFanMode::CLIMATE_FAN_AUTO)
                   .perform();
               id(minuet_tone)->execute("auto_temp_default");
@@ -1749,21 +1751,23 @@ minuet_lid_controller:
 # This design was chosen so that the fan and lid entities always reflect the true
 # state of the device (insofar as it knows) and it ensures a smooth handoff of control back
 # to the user when the thermostat is disabled or overridden.
-#
-# The thermostat setpoint is defined in steps of 1°F to match the behavior of the original
-# fan controller.  While it may be tempting to switch everything to °C, changing the units
-# could result in subtle incompatibility with the IR remote control.
 minuet_thermostat:
   substitutions:
-    # The temperature used when the thermostat is reset or set to the 'Off' preset.
-    # This number is printed on the keypad label and in the user guide and it serves as the
-    # starting point for the user to set the desired temperature with the up/down buttons.
-    # Don't change the reset temperature value.
+    # Don't change these temperature values.
+    # Refer to the implementation notes in README.md for details on why they were chosen.
     minuet_thermostat_reset_temperature: "78°F"
-    # These temperatures match the range supported by the remote control.
-    minuet_thermostat_min_temperature: "29°F"
-    minuet_thermostat_max_temperature: "99°F"
-    minuet_thermostat_temperature_step: "1°F"
+    minuet_thermostat_min_temperature: "-5°C"
+    minuet_thermostat_max_temperature: "50°C"
+    minuet_thermostat_visual_temperature_step: "0.5°C"
+    # A macro for temperature unit conversion.
+    minuet_to_celsius_macro: |-
+      <% macro to_celsius(value) %>
+        <% if value.endswith("°F") %>
+          ${ ((value | replace("°F", "") | float(0)) - 32) * 5 / 9 }
+        <% else %>
+          ${ value | replace("°C", "") | float(0) }
+        <% endif %>
+      <% endmacro %>
   globals:
     - id: minuet_thermostat_override
       type: bool
@@ -1841,9 +1845,9 @@ minuet_thermostat:
       visual: # The IR remote uses Fahrenheit natively and expects the fan to do so as well
         min_temperature: ${minuet_thermostat_min_temperature}
         max_temperature: ${minuet_thermostat_max_temperature}
-        temperature_step: ${minuet_thermostat_temperature_step}
-      cool_overrun: 2°F
-      cool_deadband: 1°F
+        temperature_step: ${minuet_thermostat_visual_temperature_step}
+      cool_overrun: 1°C
+      cool_deadband: 0.5°C
       min_idle_time: 0s
       min_cooling_off_time: 0s
       min_cooling_run_time: 0s
@@ -2009,12 +2013,17 @@ minuet_thermostat:
       then:
         lambda: |-
           id(minuet_thermostat_update).execute();
+
+
+### PACKAGE: THERMOSTAT PRESETS
+#
+# Creates entities to let the user configure the presets at runtime.
 minuet_thermostat_preset_home: !include
   file: thermostat_preset.yaml
   vars:
     minuet_thermostat_preset_id: home
     minuet_thermostat_preset_name: "Home"
-    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_temperature: "77°F"
     minuet_thermostat_preset_default_fan_mode: "Auto"
     minuet_thermostat_preset_default_lid_mode: "Auto"
 minuet_thermostat_preset_sleep: !include
@@ -2022,7 +2031,7 @@ minuet_thermostat_preset_sleep: !include
   vars:
     minuet_thermostat_preset_id: sleep
     minuet_thermostat_preset_name: "Sleep"
-    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_temperature: "77°F"
     minuet_thermostat_preset_default_fan_mode: "Quiet"
     minuet_thermostat_preset_default_lid_mode: "Open"
 minuet_thermostat_preset_away: !include
@@ -2030,7 +2039,7 @@ minuet_thermostat_preset_away: !include
   vars:
     minuet_thermostat_preset_id: away
     minuet_thermostat_preset_name: "Away"
-    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_temperature: "77°F"
     minuet_thermostat_preset_default_fan_mode: "Low"
     minuet_thermostat_preset_default_lid_mode: "Auto"
 minuet_thermostat_preset_eco: !include
@@ -2038,7 +2047,7 @@ minuet_thermostat_preset_eco: !include
   vars:
     minuet_thermostat_preset_id: eco
     minuet_thermostat_preset_name: "Eco"
-    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_temperature: "77°F"
     minuet_thermostat_preset_default_fan_mode: "Off"
     minuet_thermostat_preset_default_lid_mode: "Auto"
 

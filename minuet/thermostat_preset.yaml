@@ -11,7 +11,7 @@
 defaults:
   minuet_thermostat_preset_id: home
   minuet_thermostat_preset_name: "Home"
-  minuet_thermostat_preset_default_temperature: 78°F
+  minuet_thermostat_preset_default_temperature: "78°F"
   minuet_thermostat_preset_default_fan_mode: "Auto"
   minuet_thermostat_preset_default_lid_mode: "Auto"
 select:
@@ -50,14 +50,14 @@ number:
     icon: mdi:thermometer-auto
     entity_category: config
     device_class: temperature
-    unit_of_measurement: °F
+    unit_of_measurement: °C
     mode: box
     platform: template
     optimistic: true
-    min_value: ${minuet_thermostat_min_temperature | replace('°F', '')}
-    max_value: ${minuet_thermostat_max_temperature | replace('°F', '')}
-    step: ${minuet_thermostat_temperature_step | replace('°F', '')}
-    initial_value: ${minuet_thermostat_preset_default_temperature | replace('°F', '')}
+    min_value: ${minuet_to_celsius_macro}${to_celsius(minuet_thermostat_min_temperature)}
+    max_value: ${minuet_to_celsius_macro}${to_celsius(minuet_thermostat_max_temperature)}
+    step: ${minuet_to_celsius_macro}${to_celsius(minuet_thermostat_visual_temperature_step)}
+    initial_value: ${minuet_to_celsius_macro}${to_celsius(minuet_thermostat_preset_default_temperature)}
     restore_value: true
     on_value:
       then:
@@ -76,4 +76,4 @@ script:
               ClimateMode::CLIMATE_MODE_COOL,
               FAN_MODES[id(minuet_thermostat_preset_${minuet_thermostat_preset_id}_fan_mode_setting).active_index().value_or(0)],
               minuet::LidMode(id(minuet_thermostat_preset_${minuet_thermostat_preset_id}_lid_mode_setting).active_index().value_or(0)),
-              fahrenheit_to_celsius(id(minuet_thermostat_preset_${minuet_thermostat_preset_id}_temperature_setting).state));
+              id(minuet_thermostat_preset_${minuet_thermostat_preset_id}_temperature_setting).state);
