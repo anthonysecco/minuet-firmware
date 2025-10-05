@@ -54,15 +54,16 @@ defaults:
 ### PACKAGE: PROJECT
 #
 # Provides project information for adopting the Minuet firmware configuration
-# into the ESPHome Builder.
+# into the ESPHome Builder.  Dashboard import is not enabled because ESPHome does
+# not currently pull in all of the files needed to build the firmware that way.
 minuet_project:
   esphome:
     project:
       name: "brown-studios.minuet"
-      version: "3.0.1"
-  dashboard_import:
-    package_import_url: "github://brown-studios/minuet-firmware/minuet.yaml@main"
-    import_full_config: true
+      version: "3.0.2"
+  #dashboard_import:
+  #  package_import_url: "github://brown-studios/minuet-firmware/minuet.yaml@main"
+  #  import_full_config: true
 
 ### PACKAGE: BUILD
 #
