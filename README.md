@@ -24,7 +24,7 @@ To get started, you will need to install the ESPHome tools either in [Home Assis
 
 - Familiarize yourself with the [ESPHome](https://esphome.io/) tools that you will be using to build the firmware.
 - Download the most recent contents of this repository.
-- Make a copy of `minuet.yaml` with a name of your choice, such as `my_minuet.yaml`.  Or [use `minuet.yaml` as a package](#advanced-configuration-using-minuetyaml-as-a-package).
+- Make a copy of `minuet.yaml` with a name of your choice, such as `my_minuet.yaml`.  Or [use `minuet.yaml` as a package](#development-configuration-using-minuetyaml-as-a-package).
 - Ensure that the `minuet` directory is next to `my_minuet.yaml`.  If you are using the ESPHome Builder add-on for Home Assistant, copy the `minuet` directory into the `/homeassistant/esphome` directory next to `my_minuet.yaml`.
 - Compile the unmodified firmware to confirm that your development environment works correctly before you start making changes.
 - Edit `my_minuet.yaml` to your heart's content.
@@ -44,13 +44,16 @@ The YAML configuration is subdivided into [packages](https://esphome.io/componen
 
 Some files contain collections of packages when one package just isn't enough.
 
-### Advanced configuration: using `minuet.yaml` as a package
+### Development configuration: using `minuet.yaml` as a package
 
-Instead of copying and editing `minuet.yaml` as a template for your configuration, you can include `minuet.yaml` unmodified as a package and layer your changes on top.  This method makes upgrades easier and it can be useful for firmware development.
+Instead of copying and editing `minuet.yaml` as a template for your configuration, you can include `minuet.yaml` unmodified as a package and layer your changes on top.  This method has some limitations but it can be useful for firmware development.
 
 Create an empty YAML file with a name of your choice, such as `my_minuet.yaml`.
 
 Add the following contents to the file to get started.  Change this example to your liking.  Your declarations override those in the base template.  Use the [`!remove`]((https://esphome.io/components/packages/)) directive to remove sections in the base template that you don't need.
+
+> [!NOTE]
+> The development configuration method cannot modify substitution variables that are baked into `minuet.yaml`; you'll have to use the standard configuration method or modify `minuet.yaml` for some use-cases.
 
 <details>
 <summary>Example my_minuet.yaml</summary>
