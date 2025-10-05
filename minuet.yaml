@@ -55,15 +55,6 @@ packages:
   #   - Set `minuet_outdoor_aqi_sensor_id` to provide the
   #     outdoor air quality index.
   #     Defaults to "" for none.
-  #   - Set `minuet_thermostat_home_preset_temperature` to the default temperature
-  #     for the Home preset.
-  #     Defaults to "78°F".
-  #   - Set `minuet_thermostat_sleep_preset_temperature` to the default temperature
-  #     for the Sleep preset.
-  #     Defaults to "78°F".
-  #   - Set `minuet_thermostat_away_preset_temperature` to the default temperature
-  #     for the Away preset.
-  #     Defaults to "95°F".
   <<: !include
     file: minuet/core.yaml
     vars:
@@ -75,9 +66,6 @@ packages:
       # minuet_outdoor_ambient_temperature_sensor_id: ""
       # minuet_outdoor_relative_humidity_sensor_id: ""
       # minuet_outdoor_aqi_sensor_id: ""
-      # minuet_thermostat_home_preset_temperature: "78°F"
-      # minuet_thermostat_sleep_preset_temperature: "78°F"
-      # minuet_thermostat_away_preset_temperature: "95°F"
 
   ### PACKAGE COLLECTION: ACCESSORIES
   #

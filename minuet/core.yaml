@@ -29,15 +29,6 @@
 #   - Set `minuet_outdoor_aqi_sensor_id` to provide the
 #     outdoor air quality index.
 #     Defaults to "" for none.
-#   - Set `minuet_thermostat_home_preset_temperature` to the default temperature
-#     for the Home preset.
-#     Defaults to "78°F".
-#   - Set `minuet_thermostat_sleep_preset_temperature` to the default temperature
-#     for the Sleep preset.
-#     Defaults to "78°F".
-#   - Set `minuet_thermostat_away_preset_temperature` to the default temperature
-#     for the Away preset.
-#     Defaults to "95°F".
 defaults:
   minuet_board_version: "unknown"
   minuet_indoor_ambient_temperature_sensor_id: "minuet_ambient_temperature"
@@ -47,9 +38,6 @@ defaults:
   minuet_outdoor_ambient_temperature_sensor_id: ""
   minuet_outdoor_relative_humidity_sensor_id: ""
   minuet_outdoor_aqi_sensor_id: ""
-  minuet_thermostat_home_preset_temperature: "78°F"
-  minuet_thermostat_sleep_preset_temperature: "78°F"
-  minuet_thermostat_away_preset_temperature: "95°F"
 
 ### PACKAGE: PROJECT
 #
@@ -418,6 +406,7 @@ minuet_battery_monitor:
       name: "Low Battery Voltage Threshold"
       icon: mdi:battery-alert
       entity_category: config
+      device_class: voltage
       unit_of_measurement: V
       mode: box
       platform: template
@@ -431,6 +420,7 @@ minuet_battery_monitor:
       name: "High Battery Voltage Threshold"
       icon: mdi:battery-alert
       entity_category: config
+      device_class: voltage
       unit_of_measurement: V
       mode: box
       platform: template
@@ -699,7 +689,7 @@ minuet_tone:
       "auto_fan_off:d=16,o=4,b=144:e6,p,8a5",
       "auto_dir_in:d=16,o=4,b=144:32e6,32d6,8c6",
       "auto_dir_out:d=16,o=4,b=144:32e6,32f6,8g6",
-      "auto_dir_same:d=16,o=4,b=144:32e6,32p,8e6",
+      "auto_dir_default:d=16,o=4,b=144:32e6,32p,8e6",
       "rain_on:",
       "rain_off:",
       "ir_confirm:",
@@ -1081,7 +1071,7 @@ minuet_keypad_control:
             if (menu == Menu::ENHANCED) {
               id(minuet_thermostat_fan_direction).make_call().select_next(true).perform();
               const auto& index = id(minuet_thermostat_fan_direction).active_index();
-              id(minuet_tone)->execute(index == 1 ? "auto_dir_out" : index == 2 ? "auto_dir_in" : "auto_dir_same");
+              id(minuet_tone)->execute(index == 1 ? "auto_dir_out" : index == 2 ? "auto_dir_in" : "auto_dir_default");
             }
           };
           const auto do_hold_auto = [which_menu]() -> bool {
@@ -1576,8 +1566,8 @@ minuet_fan_controller:
       optimistic: true
       restore_value: false
       options:
-        - Exhaust
-        - Intake
+        - Out
+        - In
       on_value:
         then:
           - script.execute: minuet_fan_control_update
@@ -1770,6 +1760,10 @@ minuet_thermostat:
     # starting point for the user to set the desired temperature with the up/down buttons.
     # Don't change the reset temperature value.
     minuet_thermostat_reset_temperature: "78°F"
+    # These temperatures match the range supported by the remote control.
+    minuet_thermostat_min_temperature: "29°F"
+    minuet_thermostat_max_temperature: "99°F"
+    minuet_thermostat_temperature_step: "1°F"
   globals:
     - id: minuet_thermostat_override
       type: bool
@@ -1806,9 +1800,10 @@ minuet_thermostat:
           - lambda: |-
               if (i == 0) {
                 // Reset some settings that can't be changed with the keypad using standard controls
-                // although they can still be controlled via the ESPHome web app and API
+                // although they can still be controlled via the ESPHome API
                 id(minuet_thermostat).make_call().set_fan_mode(CLIMATE_FAN_AUTO).perform();
                 id(minuet_thermostat_fan_direction).make_call().select_first().perform();
+                id(minuet_thermostat_lid_mode).make_call().select_first().perform();
                 id(minuet_thermostat_reset_override).execute();
               }
     - id: minuet_thermostat_fan_direction
@@ -1818,9 +1813,9 @@ minuet_thermostat:
       optimistic: true
       restore_value: true
       options:
-        - Same as manual
-        - Air out
-        - Air in
+        - Default
+        - Out
+        - In
       on_value:
         then:
           - script.execute: minuet_thermostat_update
@@ -1832,8 +1827,8 @@ minuet_thermostat:
       restore_value: true
       options:
         - Auto
-        - Keep open
-        - Keep closed
+        - Open
+        - Closed
       on_value:
         then:
           - script.execute: minuet_thermostat_update
@@ -1844,9 +1839,9 @@ minuet_thermostat:
       platform: thermostat
       sensor: minuet_ambient_temperature # Overridden by the governor package
       visual: # The IR remote uses Fahrenheit natively and expects the fan to do so as well
-        min_temperature: 29°F
-        max_temperature: 99°F
-        temperature_step: 1°F
+        min_temperature: ${minuet_thermostat_min_temperature}
+        max_temperature: ${minuet_thermostat_max_temperature}
+        temperature_step: ${minuet_thermostat_temperature_step}
       cool_overrun: 2°F
       cool_deadband: 1°F
       min_idle_time: 0s
@@ -1885,42 +1880,18 @@ minuet_thermostat:
       on_state:
         then:
           - script.execute: minuet_thermostat_update
-      preset:
-        - name: 'Off'
-          mode: 'off'
-          fan_mode: 'auto'
-          # lid_mode: Auto
-          default_target_temperature_high: ${minuet_thermostat_reset_temperature}
-        - name: 'Home'
-          mode: 'cool'
-          fan_mode: 'auto'
-          # lid_mode: Auto
-          default_target_temperature_high: ${minuet_thermostat_home_preset_temperature}
-        - name: 'Sleep'
-          mode: 'cool'
-          fan_mode: 'quiet'
-          # lid_mode: Keep open
-          default_target_temperature_high: ${minuet_thermostat_sleep_preset_temperature}
-        - name: 'Away'
-          mode: 'cool'
-          fan_mode: 'low'
-          # lid_mode: Auto
-          default_target_temperature_high: ${minuet_thermostat_away_preset_temperature}
-        - name: 'Passive'
-          mode: 'cool'
-          fan_mode: 'off'
-          # lid_mode: Auto
+      preset: # Note: Additional presets are configured in callbacks
+        - name: "Off"
+          mode: "off"
+          fan_mode: "auto"
           default_target_temperature_high: ${minuet_thermostat_reset_temperature}
       preset_change:
         then:
           - lambda: |-
               const auto& therm = id(minuet_thermostat);
               auto& lid_mode = id(minuet_thermostat_lid_mode);
-              if (therm->preset == ClimatePreset::CLIMATE_PRESET_SLEEP) {
-                lid_mode->make_call().set_index(1).perform();
-              } else {
-                lid_mode->make_call().set_index(0).perform();
-              }
+              lid_mode->make_call().set_index(size_t(minuet::get_thermostat_preset_lid_mode(
+                  therm->preset.value_or(ClimatePreset::CLIMATE_PRESET_NONE)))).perform();
       default_preset: 'Off'
       on_boot_restore_from: memory
   switch:
@@ -2003,7 +1974,7 @@ minuet_thermostat:
                 .target_temperature = therm->target_temperature,
                 .action = therm->action,
                 .fan_mode = therm->fan_mode.value_or(CLIMATE_FAN_AUTO),
-                .lid_mode = minuet::governor::LidMode(id(minuet_thermostat_lid_mode).active_index().value_or(0)),
+                .lid_mode = minuet::LidMode(id(minuet_thermostat_lid_mode).active_index().value_or(0)),
               };
               minuet::governor::ControlOutput output = minuet::governor::update(input);
 
@@ -2038,6 +2009,39 @@ minuet_thermostat:
       then:
         lambda: |-
           id(minuet_thermostat_update).execute();
+minuet_thermostat_preset_home: !include
+  file: thermostat_preset.yaml
+  vars:
+    minuet_thermostat_preset_id: home
+    minuet_thermostat_preset_name: "Home"
+    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_fan_mode: "Auto"
+    minuet_thermostat_preset_default_lid_mode: "Auto"
+minuet_thermostat_preset_sleep: !include
+  file: thermostat_preset.yaml
+  vars:
+    minuet_thermostat_preset_id: sleep
+    minuet_thermostat_preset_name: "Sleep"
+    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_fan_mode: "Quiet"
+    minuet_thermostat_preset_default_lid_mode: "Open"
+minuet_thermostat_preset_away: !include
+  file: thermostat_preset.yaml
+  vars:
+    minuet_thermostat_preset_id: away
+    minuet_thermostat_preset_name: "Away"
+    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_fan_mode: "Low"
+    minuet_thermostat_preset_default_lid_mode: "Auto"
+minuet_thermostat_preset_eco: !include
+  file: thermostat_preset.yaml
+  vars:
+    minuet_thermostat_preset_id: eco
+    minuet_thermostat_preset_name: "Eco"
+    minuet_thermostat_preset_default_temperature: 78°F
+    minuet_thermostat_preset_default_fan_mode: "Off"
+    minuet_thermostat_preset_default_lid_mode: "Auto"
+
 
 ### PACKAGE: GOVERNOR
 #

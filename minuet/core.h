@@ -1,7 +1,11 @@
 // MINUET CORE HELPERS
+#pragma once
+
 #include "esphome/components/fan/fan.h"
+#include "esphome/components/climate/climate_mode.h"
 
 #include <cstdint>
+#include <map>
 
 namespace minuet {
 
@@ -53,6 +57,29 @@ constexpr bool fan_direction_is_exhaust(esphome::fan::FanDirection direction) {
 
 constexpr esphome::fan::FanDirection fan_direction(bool exhaust) {
   return exhaust ? esphome::fan::FanDirection::REVERSE : esphome::fan::FanDirection::FORWARD;
+}
+
+// The lid behavior when the thermostat is enabled.
+enum class LidMode : uint8_t {
+  AUTO = 0,
+  OPEN = 1,
+  CLOSED = 2,
+};
+
+std::map<ClimatePreset, LidMode> thermostat_preset_lid_modes;
+
+void set_thermostat_preset_config(ClimatePreset preset, ClimateMode mode, ClimateFanMode fan_mode,
+    LidMode lid_mode, float default_temperature) {
+  esphome::thermostat::ThermostatClimateTargetTempConfig config(default_temperature);
+  config.set_mode(mode);
+  config.set_fan_mode(fan_mode);
+  thermostat_preset_lid_modes[preset] = lid_mode;
+  minuet_thermostat->set_preset_config(preset, config);
+}
+
+LidMode get_thermostat_preset_lid_mode(ClimatePreset preset) {
+  auto it = thermostat_preset_lid_modes.find(preset);
+  return it != thermostat_preset_lid_modes.end() ? it->second : LidMode::AUTO;
 }
 
 } // namespace minuet

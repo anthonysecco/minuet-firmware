@@ -2,8 +2,11 @@
 //
 // Determines the fan speed and lid state under automatic thermostat control
 // based on the thermostat state, user preferences, and environmental sensors.
+#pragma once
+
 #include <cstdint>
 
+#include "core.h"
 #include "esphome/core/log.h"
 #include "esphome/components/sensor/sensor.h"
 
@@ -33,13 +36,6 @@ esphome::sensor::Sensor* outdoor_relative_humidity_sensor{nullptr};
 // Outdoor air quality index.
 esphome::sensor::Sensor* outdoor_aqi_sensor{nullptr};
 
-// The lid behavior when the thermostat is enabled.
-enum class LidMode : uint8_t {
-  AUTO = 0,
-  KEEP_OPEN = 1,
-  KEEP_CLOSED = 2,
-};
-
 // The governor's control inputs.
 struct ControlInput {
   // Ambient temperature in °C.  This is the value that the thermostat most recently
@@ -64,8 +60,8 @@ struct ControlInput {
 
   // The requested lid behavior.
   // - `AUTO`: open the lid when cooling, close the lid when off
-  // - `KEEP_OPEN`: keep the lid open for passive ventilation
-  // - `KEEP_CLOSED`: keep the lid closed for ceiling fan mode
+  // - `OPEN`: keep the lid open for passive ventilation
+  // - `CLOSED`: keep the lid closed for ceiling fan mode
   LidMode lid_mode;
 };
 
@@ -88,7 +84,7 @@ void reset() {
 // Called when the inputs change and periodically.
 ControlOutput update(ControlInput input) {
   ControlOutput output{};
-  if (input.action == CLIMATE_ACTION_COOLING) {
+  if (input.action == ClimateAction::CLIMATE_ACTION_COOLING) {
     // Determine an appropriate fan speed to enhance the thermal comfort of the occupants based on the
     // difference between the ambient temperature and target temperature and the user's specified fan mode.
     // We don't have a lot of information for this calculation and the target temperature may not be
@@ -100,16 +96,16 @@ ControlOutput update(ControlInput input) {
     const float delta = input.ambient_temperature - input.target_temperature;
     output.fan_speed = delta > 0.f ? int(std::ceil(delta / 2.f)) : 0;
     switch (input.fan_mode) {
-      case CLIMATE_FAN_OFF:
+      case ClimateFanMode::CLIMATE_FAN_OFF:
         output.fan_speed = 0;
         break;
-      case CLIMATE_FAN_LOW:
+      case ClimateFanMode::CLIMATE_FAN_LOW:
         output.fan_speed = 1;
         break;
-      case CLIMATE_FAN_QUIET:
+      case ClimateFanMode::CLIMATE_FAN_QUIET:
         output.fan_speed = std::clamp(output.fan_speed, 0, 3);
         break;
-      case CLIMATE_FAN_AUTO:
+      case ClimateFanMode::CLIMATE_FAN_AUTO:
       default:
         output.fan_speed = std::clamp(output.fan_speed, 0, 6);
         break;
@@ -121,10 +117,10 @@ ControlOutput update(ControlInput input) {
   }
 
   switch (input.lid_mode) {
-    case LidMode::KEEP_OPEN:
+    case LidMode::OPEN:
       output.lid_open = true;
       break;
-    case LidMode::KEEP_CLOSED:
+    case LidMode::CLOSED:
       output.lid_open = false;
       break;
   }
