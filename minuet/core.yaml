@@ -162,7 +162,7 @@ minuet_fan_driver:
               }
   sensor:
     - id: minuet_fan_tach
-      name: "Fan Tachometer"
+      name: "Fan tachometer"
       icon: mdi:fan
       state_class: measurement
       entity_category: diagnostic
@@ -175,7 +175,7 @@ minuet_fan_driver:
         - round_to_multiple_of: 10
       lambda: 'return minuet::fan_driver::controller.get_tachometer_rpm();'
     - id: minuet_fan_driver_bus_current
-      name: "Fan Driver Bus Current"
+      name: "Fan driver bus current"
       state_class: measurement
       device_class: current
       entity_category: diagnostic
@@ -189,7 +189,7 @@ minuet_fan_driver:
         - round_to_multiple_of: 0.01
       lambda: 'return minuet::fan_driver::controller.get_bus_current();'
     - id: minuet_fan_driver_motor_phase_peak_current
-      name: "Fan Driver Motor Phase Peak Current"
+      name: "Fan driver motor phase peak current"
       state_class: measurement
       device_class: current
       entity_category: diagnostic
@@ -203,7 +203,7 @@ minuet_fan_driver:
         - round_to_multiple_of: 0.01
       lambda: 'return minuet::fan_driver::controller.get_motor_phase_peak_current();'
     - id: minuet_fan_driver_vm_voltage
-      name: "Fan Driver VM Voltage"
+      name: "Fan driver VM voltage"
       state_class: measurement
       device_class: voltage
       entity_category: diagnostic
@@ -218,7 +218,7 @@ minuet_fan_driver:
       lambda: 'return minuet::fan_driver::controller.get_vm_voltage();'
   text_sensor:
     - id: minuet_fan_driver_fault_text
-      name: "Fan Driver Fault Status"
+      name: "Fan driver fault status"
       icon: mdi:fan-alert
       entity_category: diagnostic
       disabled_by_default: true
@@ -226,7 +226,7 @@ minuet_fan_driver:
       update_interval: never
   switch:
     - id: minuet_fan_driver_diagnostics
-      name: "Fan Driver Diagnostics"
+      name: "Fan driver diagnostics"
       icon: mdi:bug-outline
       platform: template
       restore_mode: DISABLED
@@ -235,7 +235,7 @@ minuet_fan_driver:
       disabled_by_default: true
   button:
     - id: minuet_fan_driver_mpet
-      name: "Start Motor Parameter Extraction Tool"
+      name: "Start motor parameter extraction tool"
       icon: mdi:gear
       platform: template
       disabled_by_default: true
@@ -330,7 +330,7 @@ minuet_ambient_temperature_sensor:
       configuration: DOWNSTREAM
       resistor: 10kOhm
     - id: minuet_ambient_temperature
-      name: "Ambient Temperature"
+      name: "Ambient temperature"
       platform: ntc
       sensor: minuet_thermistor_resistance
       calibration:
@@ -364,7 +364,7 @@ minuet_ambient_temperature_sensor:
 minuet_battery_monitor:
   binary_sensor:
     - id: minuet_battery_safety_lock
-      name: "Battery Safety Lock"
+      name: "Battery safety lock"
       icon: mdi:lock
       entity_category: diagnostic
       platform: template
@@ -374,7 +374,7 @@ minuet_battery_monitor:
           - script.execute: minuet_safety_lock_update
   sensor:
     - id: minuet_battery_voltage
-      name: "Battery Voltage"
+      name: "Battery voltage"
       icon: mdi:car-battery
       device_class: voltage
       state_class: measurement
@@ -403,7 +403,7 @@ minuet_battery_monitor:
               lock->publish_state(low || high);
   number:
     - id: minuet_battery_voltage_low
-      name: "Low Battery Voltage Threshold"
+      name: "Low battery voltage threshold"
       icon: mdi:battery-alert
       entity_category: config
       device_class: voltage
@@ -417,7 +417,7 @@ minuet_battery_monitor:
       restore_value: true
       initial_value: 10.8
     - id: minuet_battery_voltage_high
-      name: "High Battery Voltage Threshold"
+      name: "High battery voltage threshold"
       icon: mdi:battery-alert
       entity_category: config
       device_class: voltage
@@ -438,7 +438,7 @@ minuet_battery_monitor:
 minuet_rain_sensor:
   binary_sensor:
     - id: minuet_rain
-      name: "Rain Sensor"
+      name: "Rain sensor"
       icon: mdi:weather-rainy
       device_class: moisture
       entity_category: diagnostic
@@ -458,13 +458,13 @@ minuet_rain_sensor:
         then:
           - script.execute: minuet_rain_sensor_update
     - id: minuet_rain_stopped_fan
-      name: "Rain Stopped Fan"
+      name: "Rain stopped fan"
       device_class: problem
       entity_category: diagnostic
       platform: template
       trigger_on_initial_state: true
     - id: minuet_rain_safety_lock
-      name: "Rain Safety Lock"
+      name: "Rain safety lock"
       icon: mdi:lock
       entity_category: diagnostic
       platform: template
@@ -474,7 +474,7 @@ minuet_rain_sensor:
           - script.execute: minuet_safety_lock_update
   switch:
     - id: minuet_rain_sensor_enabled
-      name: "Rain Sensor Enabled"
+      name: "Rain sensor enabled"
       icon: mdi:weather-rainy
       platform: template
       optimistic: true
@@ -488,7 +488,7 @@ minuet_rain_sensor:
               id(minuet_rain_sensor_update).execute();
   button:
     - id: minuet_rain_sensor_reset
-      name: "Reset Rain Sensor"
+      name: "Reset rain sensor"
       icon: mdi:weather-rainy
       platform: template
       on_press:
@@ -533,7 +533,7 @@ minuet_rain_sensor:
 minuet_safety_lock:
   binary_sensor:
     - id: minuet_accessory_safety_lock
-      name: "Accessory Safety Lock"
+      name: "Accessory safety lock"
       icon: mdi:lock
       entity_category: diagnostic
       platform: gpio
@@ -550,20 +550,20 @@ minuet_safety_lock:
         then:
           - script.execute: minuet_safety_lock_update
     - id: minuet_safety_lock
-      name: "Safety Lock"
+      name: "Safety lock"
       icon: mdi:lock
       entity_category: diagnostic
       platform: template
   text_sensor:
     - id: minuet_safety_lock_reason
-      name: "Safety Lock Reason"
+      name: "Safety lock reason"
       icon: mdi:lock
       entity_category: diagnostic
       platform: template
       update_interval: never
   switch:
     - id: minuet_manual_safety_lock
-      name: "Manual Safety Lock"
+      name: "Manual safety lock"
       icon: mdi:lock
       platform: template
       optimistic: true
@@ -572,7 +572,7 @@ minuet_safety_lock:
         then:
           - script.execute: minuet_safety_lock_update
     - id: minuet_automation_safety_lock
-      name: "Automation Safety Lock"
+      name: "Automation safety lock"
       icon: mdi:lock
       platform: template
       optimistic: true
@@ -721,7 +721,7 @@ minuet_tone:
       output: minuet_tone_pwm
   switch:
     - id: minuet_tone_enable
-      name: "Audible Feedback"
+      name: "Audible feedback"
       icon: mdi:volume-high
       entity_category: config
       platform: template
@@ -892,7 +892,7 @@ minuet_keypad_control:
       entity_category: config
     - id: minuet_factory_reset
       platform: factory_reset
-      name: Factory Reset
+      name: Factory reset
       icon: mdi:restart-alert
       disabled_by_default: true
       entity_category: config
@@ -904,7 +904,7 @@ minuet_keypad_control:
           - button.press: minuet_factory_reset
   switch:
     - id: minuet_keypad_indicators_suppressed
-      name: "Keypad Indicators Suppressed"
+      name: "Keypad indicators suppressed"
       icon: mdi:led-on
       entity_category: config
       platform: template
@@ -1648,7 +1648,7 @@ minuet_fan_controller:
               }
   switch:
     - id: minuet_fan_override
-      name: "Fan Override"
+      name: "Fan override"
       icon: mdi:bug-outline
       platform: template
       restore_mode: DISABLED
@@ -1659,7 +1659,7 @@ minuet_fan_controller:
         then:
           - script.execute: minuet_fan_control_update
     - id: minuet_fan_override_brake
-      name: "Fan Override Brake"
+      name: "Fan override brake"
       icon: mdi:pause
       platform: template
       restore_mode: DISABLED
@@ -1670,7 +1670,7 @@ minuet_fan_controller:
         then:
           - script.execute: minuet_fan_control_update
     - id: minuet_fan_override_keep_awake
-      name: "Fan Override Keep Awake"
+      name: "Fan override keep awake"
       icon: mdi:pause
       platform: template
       restore_mode: DISABLED
@@ -1682,7 +1682,7 @@ minuet_fan_controller:
           - script.execute: minuet_fan_control_update
   number:
     - id: minuet_fan_override_speed
-      name: "Fan Override Speed"
+      name: "Fan override speed"
       icon: mdi:square-wave
       unit_of_measurement: 'rpm'
       entity_category: config
@@ -1701,7 +1701,7 @@ minuet_fan_controller:
   select:
     - id: minuet_fan_override_direction
       platform: template
-      name: "Fan Override Direction"
+      name: "Fan override direction"
       entity_category: config
       disabled_by_default: true
       optimistic: true
@@ -1951,7 +1951,7 @@ minuet_thermostat:
               }
     - id: minuet_thermostat_fan_direction
       platform: template
-      name: "Thermostat Fan Direction"
+      name: "Thermostat fan direction"
       entity_category: config
       optimistic: true
       restore_value: true
@@ -1964,7 +1964,7 @@ minuet_thermostat:
           - script.execute: minuet_thermostat_update
     - id: minuet_thermostat_lid_mode
       platform: template
-      name: "Thermostat Lid Mode"
+      name: "Thermostat lid mode"
       entity_category: config
       optimistic: true
       restore_value: true
@@ -2039,7 +2039,7 @@ minuet_thermostat:
       on_boot_restore_from: memory
   switch:
     - id: minuet_thermostat_override_switch
-      name: "Thermostat Manual Override"
+      name: "Thermostat manual override"
       icon: mdi:thermostat
       platform: template
       restore_mode: DISABLED
@@ -2239,7 +2239,7 @@ minuet_persistence:
   select:
     - id: minuet_power_on_behavior
       platform: template
-      name: "Power On Behavior"
+      name: "Power on behavior"
       entity_category: config
       optimistic: true
       restore_value: true

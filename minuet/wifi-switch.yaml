@@ -19,7 +19,7 @@ defaults:
   minuet_wifi_switch_restore_mode: RESTORE_DEFAULT_OFF
 switch:
   - id: minuet_wifi_switch
-    name: "WiFi Enable"
+    name: "WiFi enable"
     icon: mdi:wifi
     platform: template
     optimistic: true

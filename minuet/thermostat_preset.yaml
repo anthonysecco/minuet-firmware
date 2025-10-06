@@ -17,7 +17,7 @@ defaults:
 select:
   - id: minuet_thermostat_preset_${minuet_thermostat_preset_id}_fan_mode_setting
     platform: template
-    name: "Thermostat Preset ${minuet_thermostat_preset_name} Fan Mode"
+    name: "Thermostat preset ${minuet_thermostat_preset_name} fan mode"
     entity_category: config
     optimistic: true
     options:
@@ -32,7 +32,7 @@ select:
         - script.execute: minuet_thermostat_preset_${minuet_thermostat_preset_id}_change
   - id: minuet_thermostat_preset_${minuet_thermostat_preset_id}_lid_mode_setting
     platform: template
-    name: "Thermostat Preset ${minuet_thermostat_preset_name} Lid Mode"
+    name: "Thermostat preset ${minuet_thermostat_preset_name} lid mode"
     entity_category: config
     optimistic: true
     options:
@@ -46,7 +46,7 @@ select:
         - script.execute: minuet_thermostat_preset_${minuet_thermostat_preset_id}_change
 number:
   - id: minuet_thermostat_preset_${minuet_thermostat_preset_id}_temperature_setting
-    name: "Thermostat Preset ${minuet_thermostat_preset_name} Temperature"
+    name: "Thermostat preset ${minuet_thermostat_preset_name} temperature"
     icon: mdi:thermometer-auto
     entity_category: config
     device_class: temperature
