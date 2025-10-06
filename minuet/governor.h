@@ -103,11 +103,11 @@ ControlOutput update(ControlInput input) {
         output.fan_speed = 1;
         break;
       case ClimateFanMode::CLIMATE_FAN_QUIET:
-        output.fan_speed = std::clamp(output.fan_speed, 0, 3);
+        output.fan_speed = std::clamp(output.fan_speed, 1, 3);
         break;
       case ClimateFanMode::CLIMATE_FAN_AUTO:
       default:
-        output.fan_speed = std::clamp(output.fan_speed, 0, 6);
+        output.fan_speed = std::clamp(output.fan_speed, 1, 6);
         break;
     }
     output.lid_open = true;
