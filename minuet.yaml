@@ -102,6 +102,8 @@ packages:
   # section and specify the SSID and password for your WiFi network in `secrets.yaml`
   # then comment out the `ap` and `captive_portal` sections.  Set `fast_connect` to true
   # to connect to your network more quickly or to connect to hidden networks.
+  # You can also change `minuet_wifi_switch_restore_mode` to `ALWAYS_ON` if you want
+  # WiFi to turn on automatically even after a factory reset.
   #
   # The WiFi radio consumes negligible power when connected to a network as a client.
   # The WiFi radio consumes about 250 mW when operating in access point mode.
