@@ -5,6 +5,8 @@
 #pragma once
 
 #include <cstdint>
+#include <algorithm>  // for std::clamp
+#include <cmath>      // for std::pow, std::lround
 
 #include "core.h"
 #include "esphome/core/log.h"
@@ -36,96 +38,144 @@ esphome::sensor::Sensor* outdoor_relative_humidity_sensor{nullptr};
 // Outdoor air quality index.
 esphome::sensor::Sensor* outdoor_aqi_sensor{nullptr};
 
-// The governor's control inputs.
+// -----------------------------------------------------------------------------
+// Tunable constants
+// -----------------------------------------------------------------------------
+static constexpr float kDeadbandC             = 0.3f;
+static constexpr float kOutsideMarginC        = 0.5f;
+static constexpr float kSpanAutoC             = 5.0f;
+static constexpr float kSpanQuietC            = 7.5f;
+static constexpr float kGammaAuto             = 1.0f;
+static constexpr float kGammaQuiet            = 3.75f; // 2.5 to optimized for energy, 5.0 to optimize for quiet, 3.75 is a good middle ground
+static constexpr int   kMaxVentWhenHotOutside = 3;
+static constexpr int   kMaxAuto               = 10;
+static constexpr int   kMaxQuiet              = 10;
+static constexpr float kEMAAlpha              = 0.4f;
+static constexpr int   kMinPersistTicks       = 2;
+static constexpr int   kMaxStepPerTick        = 1;
+
+// Internal smoothing/hysteresis state
+static bool  s_ema_initialized = false;
+static float s_tin_ema         = 0.0f;
+static int   s_current_speed   = 0;
+static int   s_proposed_speed  = 0;
+static int   s_persist_count   = 0;
+
+// -----------------------------------------------------------------------------
+// Input / Output structures
+// -----------------------------------------------------------------------------
 struct ControlInput {
-  // Ambient temperature in °C.  This is the value that the thermostat most recently
-  // sampled from `indoor_ambient_temperature_sensor`.
-  float ambient_temperature;
-
-  // Target temperature in °C.  This is the thermostat's setpoint.
-  float target_temperature;
-
-  // The requested climate action considering the current temperature, target temperature,
-  // and thermostat hysteresis parameters.
-  // - `CLIMATE_ACTION_OFF`: no demand
-  // - `CLIMATE_ACTION_COOLING`: demand for cooling
-  ClimateAction action;
-
-  // The requested fan behavior.
-  // - `CLIMATE_FAN_OFF`: use passive ventilation
-  // - `CLIMATE_FAN_LOW`: use the lowest fan speed only
-  // - `CLIMATE_FAN_AUTO`: control the fan speed automatically
-  // - `CLIMATE_FAN_QUIET`: control the fan speed automatically and optimize for quietness
-  ClimateFanMode fan_mode;
-
-  // The requested lid behavior.
-  // - `AUTO`: open the lid when cooling, close the lid when off
-  // - `OPEN`: keep the lid open for passive ventilation
-  // - `CLOSED`: keep the lid closed for ceiling fan mode
-  LidMode lid_mode;
+  float ambient_temperature;   // °C (indoor)
+  float target_temperature;    // °C (setpoint)
+  ClimateAction action;        // thermostat action
+  ClimateFanMode fan_mode;     // fan mode
+  LidMode lid_mode;            // requested lid mode
 };
 
-// The governor's control outputs.
 struct ControlOutput {
-  // The requested fan speed from 0 (off) to 10 (maximum).
-  // TODO: Consider making this floating point to allow for interpolation.
-  int fan_speed{0};
-
-  // True if the lid should be open.
-  bool lid_open{false};
+  int  fan_speed{0};           // 0–10
+  bool lid_open{false};        // lid state
 };
 
-// Resets the governor's internal state.
-// Called when the thermostat is enabled.
+// -----------------------------------------------------------------------------
+// Reset internal state
+// -----------------------------------------------------------------------------
 void reset() {
+  s_ema_initialized = false;
+  s_tin_ema         = 0.0f;
+  s_current_speed   = 0;
+  s_proposed_speed  = 0;
+  s_persist_count   = 0;
 }
 
-// Determines the next set of control outputs from the provided inputs and sensors.
-// Called when the inputs change and periodically.
+// -----------------------------------------------------------------------------
+// Main control logic
+// -----------------------------------------------------------------------------
 ControlOutput update(ControlInput input) {
   ControlOutput output{};
+
   if (input.action == ClimateAction::CLIMATE_ACTION_COOLING) {
-    // Determine an appropriate fan speed to enhance the thermal comfort of the occupants based on the
-    // difference between the ambient temperature and target temperature and the user's specified fan mode.
-    // We don't have a lot of information for this calculation and the target temperature may not be
-    // achievable when it's too hot outdoors so a PID controller may not be of much use here as it would
-    // likely always saturate.  So the goal is simply to provide enough airflow efficiently.
-    //
-    // TODO: Choose a less arbitrary transfer function.
-    // TODO: Control the fan speed over a continuous range of values instead of in discrete steps?
-    const float delta = input.ambient_temperature - input.target_temperature;
-    output.fan_speed = delta > 0.f ? int(std::ceil(delta / 2.f)) : 0;
-    switch (input.fan_mode) {
-      case ClimateFanMode::CLIMATE_FAN_OFF:
-        output.fan_speed = 0;
-        break;
-      case ClimateFanMode::CLIMATE_FAN_LOW:
-        output.fan_speed = 1;
-        break;
-      case ClimateFanMode::CLIMATE_FAN_QUIET:
-        output.fan_speed = std::clamp(output.fan_speed, 1, 3);
-        break;
-      case ClimateFanMode::CLIMATE_FAN_AUTO:
-      default:
-        output.fan_speed = std::clamp(output.fan_speed, 1, 6);
-        break;
+    // Exponential moving average on indoor temperature
+    const float tin_raw = input.ambient_temperature;
+    if (!s_ema_initialized) {
+      s_tin_ema = tin_raw;
+      s_ema_initialized = true;
+    } else {
+      s_tin_ema = kEMAAlpha * tin_raw + (1.0f - kEMAAlpha) * s_tin_ema;
     }
-    output.lid_open = true;
+
+    const float Tin  = s_tin_ema;
+    const float Tset = input.target_temperature;
+
+    // Outdoor temperature if available
+    float Tout = 0.0f;
+    bool  has_out = false;
+    if (outdoor_ambient_temperature_sensor && outdoor_ambient_temperature_sensor->has_state()) {
+      Tout = outdoor_ambient_temperature_sensor->state;
+      has_out = true;
+    }
+
+    // Adjust target to not cool below outdoor + margin
+    const float target_floor = has_out ? std::max(Tset, Tout + kOutsideMarginC) : Tset;
+    const float e = Tin - target_floor;
+
+    ESP_LOGD("governor", "Tin=%.2f Tout=%.2f Tset=%.2f target_floor=%.2f e=%.2f",
+             Tin, Tout, Tset, target_floor, e);
+
+    int level = 0;
+    if (e > kDeadbandC) {
+      const bool quiet  = (input.fan_mode == ClimateFanMode::CLIMATE_FAN_QUIET);
+      const float span  = quiet ? kSpanQuietC : kSpanAutoC;
+      const float gamma = quiet ? kGammaQuiet  : kGammaAuto;
+
+      float drive   = std::clamp(e / span, 0.0f, 1.0f);
+      float level_f = 10.0f * std::pow(drive, gamma);
+      level = static_cast<int>(std::lround(level_f));
+
+      if (has_out && Tin <= Tout + kOutsideMarginC)
+        level = std::min(level, kMaxVentWhenHotOutside);
+    }
+
+    switch (input.fan_mode) {
+      case ClimateFanMode::CLIMATE_FAN_OFF:   level = 0; break;
+      case ClimateFanMode::CLIMATE_FAN_LOW:   level = 1; break;
+      case ClimateFanMode::CLIMATE_FAN_QUIET: level = std::clamp(level, 1, kMaxQuiet); break;
+      case ClimateFanMode::CLIMATE_FAN_AUTO:
+      default:                                level = std::clamp(level, 1, kMaxAuto); break;
+    }
+
+    // Apply rate limiting and persistence
+    s_proposed_speed = std::clamp(level, 0, 10);
+    int next = s_current_speed;
+    if (s_proposed_speed != s_current_speed) {
+      if (++s_persist_count >= kMinPersistTicks) {
+        int delta = s_proposed_speed - s_current_speed;
+        delta = std::clamp(delta, -kMaxStepPerTick, kMaxStepPerTick);
+        next = s_current_speed + delta;
+        s_persist_count = 0;
+      }
+    } else {
+      s_persist_count = 0;
+    }
+    s_current_speed = std::clamp(next, 0, 10);
+
+    output.fan_speed = s_current_speed;
+    output.lid_open  = true;
   } else {
     output.fan_speed = 0;
-    output.lid_open = false;
+    output.lid_open  = false;
   }
 
+  // Explicit lid mode overrides
   switch (input.lid_mode) {
-    case LidMode::OPEN:
-      output.lid_open = true;
-      break;
-    case LidMode::CLOSED:
-      output.lid_open = false;
-      break;
+    case LidMode::OPEN:   output.lid_open = true;  break;
+    case LidMode::CLOSED: output.lid_open = false; break;
+    case LidMode::AUTO:
+    default: break; // already handled by climate action
   }
+
   return output;
 }
 
-} // namespace governor
-} // namespace minuet
+}  // namespace governor
+}  // namespace minuet
