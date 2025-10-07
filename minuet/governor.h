@@ -6,7 +6,7 @@
 
 #include <cstdint>
 #include <algorithm>  // for std::clamp
-#include <cmath>      // for std::pow, std::lround
+#include <cmath>      // for std::pow, std::lround, std::isfinite
 
 #include "core.h"
 #include "esphome/core/log.h"
@@ -32,34 +32,23 @@ esphome::sensor::Sensor* indoor_aqi_sensor{nullptr};
 // Outdoor ambient temperature in Celsius.
 esphome::sensor::Sensor* outdoor_ambient_temperature_sensor{nullptr};
 
-// Outdoor relative humidify in percent.
+// Outdoor relative humidity in percent.
 esphome::sensor::Sensor* outdoor_relative_humidity_sensor{nullptr};
 
 // Outdoor air quality index.
 esphome::sensor::Sensor* outdoor_aqi_sensor{nullptr};
 
 // -----------------------------------------------------------------------------
-// Tunable constants
+// Tunable constants (no deadband/hysteresis here; thermostat handles that)
 // -----------------------------------------------------------------------------
-static constexpr float kDeadbandC             = 0.3f;
-static constexpr float kOutsideMarginC        = 0.5f;
-static constexpr float kSpanAutoC             = 5.0f;
-static constexpr float kSpanQuietC            = 7.5f;
-static constexpr float kGammaAuto             = 1.0f;
-static constexpr float kGammaQuiet            = 3.75f; // 2.5 to optimized for energy, 5.0 to optimize for quiet, 3.75 is a good middle ground
-static constexpr int   kMaxVentWhenHotOutside = 3;
-static constexpr int   kMaxAuto               = 10;
-static constexpr int   kMaxQuiet              = 10;
-static constexpr float kEMAAlpha              = 0.4f;
-static constexpr int   kMinPersistTicks       = 2;
-static constexpr int   kMaxStepPerTick        = 1;
-
-// Internal smoothing/hysteresis state
-static bool  s_ema_initialized = false;
-static float s_tin_ema         = 0.0f;
-static int   s_current_speed   = 0;
-static int   s_proposed_speed  = 0;
-static int   s_persist_count   = 0;
+static constexpr float kOutsideMarginC        = 0.5f;  // °C don't cool below Tout + margin
+static constexpr float kSpanAutoC             = 5.0f;  // °C error span mapped to full-scale AUTO
+static constexpr float kSpanQuietC            = 7.5f;  // °C error span mapped to full-scale QUIET
+static constexpr float kGammaAuto             = 1.0f;  // linear in AUTO
+static constexpr float kGammaQuiet            = 3.75f; // quieter ramp in QUIET
+static constexpr int   kMaxLevel              = 10;    // global max discrete level
+static constexpr int   kMaxAuto               = 10;    // mode cap for AUTO
+static constexpr int   kMaxQuiet              = 10;    // mode cap for QUIET
 
 // -----------------------------------------------------------------------------
 // Input / Output structures
@@ -80,86 +69,67 @@ struct ControlOutput {
 // -----------------------------------------------------------------------------
 // Reset internal state
 // -----------------------------------------------------------------------------
-void reset() {
-  s_ema_initialized = false;
-  s_tin_ema         = 0.0f;
-  s_current_speed   = 0;
-  s_proposed_speed  = 0;
-  s_persist_count   = 0;
+inline void reset() {
 }
 
 // -----------------------------------------------------------------------------
-// Main control logic
+// Main control logic (stateless mapping + outdoor safeguard)
 // -----------------------------------------------------------------------------
-ControlOutput update(ControlInput input) {
+inline ControlOutput update(const ControlInput& input) {
   ControlOutput output{};
 
+  // Only run fan logic when thermostat says we are cooling.
   if (input.action == ClimateAction::CLIMATE_ACTION_COOLING) {
-    // Exponential moving average on indoor temperature
-    const float tin_raw = input.ambient_temperature;
-    if (!s_ema_initialized) {
-      s_tin_ema = tin_raw;
-      s_ema_initialized = true;
-    } else {
-      s_tin_ema = kEMAAlpha * tin_raw + (1.0f - kEMAAlpha) * s_tin_ema;
-    }
-
-    const float Tin  = s_tin_ema;
+    const float Tin  = input.ambient_temperature;
     const float Tset = input.target_temperature;
+
+    // Guard against NaNs from sensors
+    if (!std::isfinite(Tin) || !std::isfinite(Tset)) {
+      ESP_LOGW("governor", "Invalid temperature(s): Tin=%.2f Tset=%.2f", Tin, Tset);
+      output.fan_speed = 0;
+      output.lid_open  = false;
+      return output;
+    }
 
     // Outdoor temperature if available
     float Tout = 0.0f;
     bool  has_out = false;
     if (outdoor_ambient_temperature_sensor && outdoor_ambient_temperature_sensor->has_state()) {
       Tout = outdoor_ambient_temperature_sensor->state;
-      has_out = true;
+      has_out = std::isfinite(Tout);
     }
 
-    // Adjust target to not cool below outdoor + margin
+    // Don't cool below outdoor + margin (ventilation sanity)
     const float target_floor = has_out ? std::max(Tset, Tout + kOutsideMarginC) : Tset;
-    const float e = Tin - target_floor;
+    const float error = Tin - target_floor;
 
-    ESP_LOGD("governor", "Tin=%.2f Tout=%.2f Tset=%.2f target_floor=%.2f e=%.2f",
-             Tin, Tout, Tset, target_floor, e);
+    ESP_LOGD("governor", "Tin=%.2f Tout=%s Tset=%.2f target_floor=%.2f error=%.2f",
+             Tin,
+             has_out ? esphome::str_sprintf("%.2f", Tout).c_str() : "n/a",
+             Tset, target_floor, error);
 
-    int level = 0;
-    if (e > kDeadbandC) {
-      const bool quiet  = (input.fan_mode == ClimateFanMode::CLIMATE_FAN_QUIET);
-      const float span  = quiet ? kSpanQuietC : kSpanAutoC;
-      const float gamma = quiet ? kGammaQuiet  : kGammaAuto;
+    // Shape error -> [0..1] drive, then to [0..kMaxLevel] speed with gamma curve
+    const bool  quiet  = (input.fan_mode == ClimateFanMode::CLIMATE_FAN_QUIET);
+    const float span   = quiet ? kSpanQuietC : kSpanAutoC;
+    const float gamma  = quiet ? kGammaQuiet  : kGammaAuto;
 
-      float drive   = std::clamp(e / span, 0.0f, 1.0f);
-      float level_f = 10.0f * std::pow(drive, gamma);
-      level = static_cast<int>(std::lround(level_f));
+    float drive   = std::clamp(error / span, 0.0f, 1.0f);
+    float level_f = static_cast<float>(kMaxLevel) * std::pow(drive, gamma);
+    int   level   = static_cast<int>(std::lround(level_f));
 
-      if (has_out && Tin <= Tout + kOutsideMarginC)
-        level = std::min(level, kMaxVentWhenHotOutside);
-    }
-
+    // Fan mode overrides (minimum speed of 1 in QUIET/AUTO as requested)
     switch (input.fan_mode) {
       case ClimateFanMode::CLIMATE_FAN_OFF:   level = 0; break;
       case ClimateFanMode::CLIMATE_FAN_LOW:   level = 1; break;
       case ClimateFanMode::CLIMATE_FAN_QUIET: level = std::clamp(level, 1, kMaxQuiet); break;
       case ClimateFanMode::CLIMATE_FAN_AUTO:
-      default:                                level = std::clamp(level, 1, kMaxAuto); break;
+      default:                                level = std::clamp(level, 1, kMaxAuto);  break;
     }
 
-    // Apply rate limiting and persistence
-    s_proposed_speed = std::clamp(level, 0, 10);
-    int next = s_current_speed;
-    if (s_proposed_speed != s_current_speed) {
-      if (++s_persist_count >= kMinPersistTicks) {
-        int delta = s_proposed_speed - s_current_speed;
-        delta = std::clamp(delta, -kMaxStepPerTick, kMaxStepPerTick);
-        next = s_current_speed + delta;
-        s_persist_count = 0;
-      }
-    } else {
-      s_persist_count = 0;
-    }
-    s_current_speed = std::clamp(next, 0, 10);
+    // Final clamp to supported range
+    level = std::clamp(level, 0, kMaxLevel);
 
-    output.fan_speed = s_current_speed;
+    output.fan_speed = level;
     output.lid_open  = true;
   } else {
     output.fan_speed = 0;
