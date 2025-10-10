@@ -2190,7 +2190,6 @@ minuet_thermostat_preset_eco: !include
     minuet_thermostat_preset_default_fan_mode: "Off"
     minuet_thermostat_preset_default_lid_mode: "Auto"
 
-
 ### PACKAGE: GOVERNOR
 #
 # Configures the governor module in `governor.h`.
@@ -2223,6 +2222,42 @@ minuet_governor:
             if (minuet::governor::indoor_relative_humidity_sensor) {
               id(minuet_thermostat).set_humidity_sensor(minuet::governor::indoor_relative_humidity_sensor);
             }
+
+  switch:
+    - platform: template
+      name: "Minuet: CO₂ Control"
+      id: minuet_enable_co2
+      icon: mdi:molecule-co2
+      optimistic: true
+      restore_mode: RESTORE_DEFAULT_OFF
+      turn_on_action:
+        - lambda: |-
+            minuet::governor::g_enable_co2_control = true;
+      turn_off_action:
+        - lambda: |-
+            minuet::governor::g_enable_co2_control = false;
+            minuet::governor::g_state.co2_active = false;  // drop latch
+
+    - platform: template
+      name: "Minuet: Humidity Control"
+      id: minuet_enable_rh
+      icon: mdi:water-percent
+      optimistic: true
+      restore_mode: RESTORE_DEFAULT_OFF
+      turn_on_action:
+        - lambda: |-
+            minuet::governor::g_enable_rh_control = true;
+      turn_off_action:
+        - lambda: |-
+            minuet::governor::g_enable_rh_control = false;
+            minuet::governor::g_state.rh_active = false;   // drop latch
+
+  text_sensor:
+    - platform: template
+      id: minuet_active_controller
+      name: "Minuet Active Controller"
+      icon: mdi:compare
+      update_interval: never  # governor publishes when state changes; no polling
 
 ### PACKAGE: PERSISTENCE
 #
@@ -2344,3 +2379,4 @@ minuet_failsafe:
               name: "!failsafe_restart"
           - delay: 2s
           - button.press: minuet_restart
+
