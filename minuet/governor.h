@@ -54,7 +54,7 @@ static constexpr float kOutsideMarginC = 0.5f;   // °C don't cool below Tout + 
 static constexpr float kSpanAutoC  = 5.0f;       // °C span for AUTO to reach full scale
 static constexpr float kSpanQuietC = 5.0f;       // °C span for QUIET to reach full scale
 static constexpr float kGammaAuto  = 1.0f;       // Auto - Linear Ramp-up
-static constexpr float kGammaQuiet = 2.5f;       // Quiet - Half-exponential ramp-up
+static constexpr float kGammaQuiet = 2.5f;       // Quiet - Power-Optimized Ramp-up
 // Hystersis handled by thermostat component.
 
 // CO2 controller mapping
